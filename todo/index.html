@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#ece2d2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#19130e" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Chasyn">
@@ -71,6 +71,16 @@ body {
 .chip.wait { border: 1px solid var(--muted); color: var(--muted); }
 .chip.fyi { color: var(--muted); padding-left: 0; padding-right: 0; }
 .mail-empty { padding: 18px 16px; color: var(--muted); font-size: 13.5px; }
+.mail-item { position: relative; border-bottom: 1px solid var(--line); }
+.mail-item:last-child { border-bottom: 0; }
+.mail-item .mail-card { border-bottom: 0; padding-right: 48px; }
+.mc-x { position: absolute; top: 10px; right: 8px; width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center; padding: 0; opacity: .5; }
+.mc-x svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.mail-item:hover .mc-x, .mc-x:focus-visible { opacity: 1; }
+.mc-x:hover { background: var(--accent-soft); color: var(--ink); }
+.mail-undo { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; font-size: 13px; color: var(--sheet); background: var(--ink); }
+.mail-undo button { font: 500 13px var(--body); color: var(--sheet); background: transparent; border: 1px solid currentColor; border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+@media (hover: none) { .mc-x { opacity: .8; width: 40px; height: 40px; top: 6px; right: 4px; } }
 header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 h1 { font-family: var(--display); font-weight: 700; font-size: 32px; letter-spacing: -0.01em; margin: 0; }
 .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
@@ -242,6 +252,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 
   <section class="sheet mail" id="mail" aria-label="Emails" hidden>
     <div class="section-label"><span>Emails</span><span id="mail-updated"></span></div>
+    <div class="mail-undo" id="mail-undo" role="status" hidden><span id="mail-undo-text">Email hidden</span><button type="button" id="mail-undo-btn">Undo</button></div>
     <div class="mail-list" id="mail-list"></div>
     <div class="mail-empty" id="mail-empty" hidden></div>
   </section>
@@ -565,7 +576,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   });
 
   // ---------- emails (team only; the rules hide them from everyone else) ----------
-  var mailTasks = null, mailMeta = null, mailUnsubs = [];
+  var mailTasks = null, mailMeta = null, mailUnsubs = [], mailHidden = {}, undoTimer = 0, lastHidden = null;
+  var XICON = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8"/></svg>';
   function setTab(tab) {
     document.body.dataset.tab = tab;
     Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) {
@@ -598,7 +610,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     var list = $("mail-list"), empty = $("mail-empty");
     $("mail-updated").textContent = mailMeta && mailMeta.lastRun ? "Updated " + ago(mailMeta.lastRun) : "";
     if (!mailTasks) return;
-    var items = mailTasks.slice().sort(function (a, b) {
+    var items = mailTasks.filter(function (m) {
+      var h = mailHidden[m.id];
+      return !(h && (m.lastDate || 0) <= (h.lastDate || 0));
+    }).sort(function (a, b) {
       var ra = a.status in RANK ? RANK[a.status] : 2, rb = b.status in RANK ? RANK[b.status] : 2;
       var r = ra - rb;
       return r || (b.lastDate || 0) - (a.lastDate || 0);
@@ -619,16 +634,45 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       var who = (m.people || []).slice(0, 3).join(", ");
       meta.textContent = (who ? who + " · " : "") + (m.lastDate ? ago(m.lastDate) : "");
       a.appendChild(meta);
-      list.appendChild(a);
+      var wrap = document.createElement("div"); wrap.className = "mail-item";
+      var x = document.createElement("button");
+      x.type = "button"; x.className = "mc-x"; x.innerHTML = XICON;
+      x.setAttribute("aria-label", "Hide this email"); x.title = "Hide (comes back if there's a new message)";
+      x.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); hideMail(m); });
+      wrap.appendChild(a); wrap.appendChild(x);
+      list.appendChild(wrap);
     });
     empty.hidden = items.length > 0;
     var need = items.filter(function (m) { return m.status === "Needs reply"; }).length;
     $("tab-mail-n").textContent = need ? need : "";
     empty.textContent = mailMeta ? "No active Chasyn email in the last two weeks." : "Email updates aren't connected yet. They'll appear here once the email sync is running.";
   }
+  function hideMail(m) {
+    mailHidden[m.id] = { lastDate: m.lastDate || 0 };   // hide right away; the database confirms
+    renderMail();
+    lastHidden = m;
+    $("mail-undo-text").textContent = "Hidden: " + (m.title || "email");
+    $("mail-undo").hidden = false;
+    clearTimeout(undoTimer); undoTimer = setTimeout(function () { $("mail-undo").hidden = true; }, 7000);
+    col.firestore.collection("emailsHidden").doc(m.id).set({ lastDate: m.lastDate || 0, hiddenAt: Date.now() }).catch(function (e) {
+      delete mailHidden[m.id]; renderMail(); denied(e);
+    });
+  }
+  $("mail-undo-btn").addEventListener("click", function () {
+    if (!lastHidden) return;
+    var id = lastHidden.id; lastHidden = null;
+    delete mailHidden[id]; renderMail();
+    $("mail-undo").hidden = true; clearTimeout(undoTimer);
+    col.firestore.collection("emailsHidden").doc(id).delete().catch(denied);
+  });
+
   function startMail() {
     stopMail();
     var db = col.firestore;
+    mailUnsubs.push(db.collection("emailsHidden").onSnapshot(function (snap) {
+      var h = {}; snap.docs.forEach(function (d) { h[d.id] = d.data(); });
+      mailHidden = h; renderMail();
+    }, function () {}));
     mailUnsubs.push(db.collection("emails").onSnapshot(function (snap) {
       mailTasks = snap.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); });
       showMail(true); renderMail();
@@ -639,7 +683,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   }
   function stopMail() {
     mailUnsubs.forEach(function (u) { try { u(); } catch (e) {} });
-    mailUnsubs = []; mailTasks = null; mailMeta = null; showMail(false);
+    mailUnsubs = []; mailTasks = null; mailMeta = null; mailHidden = {}; showMail(false);
   }
   setInterval(renderMail, 60000);
 
