@@ -15,11 +15,11 @@
   .bg.show { opacity: 1; }
   .shade { position: fixed; inset: 0;
     background: linear-gradient(90deg, rgba(0,0,0,.6) 0%, rgba(0,0,0,.2) 45%, rgba(0,0,0,.6) 100%),
-                linear-gradient(0deg, rgba(0,0,0,.5) 0%, rgba(0,0,0,0) 50%); }
+                linear-gradient(180deg, rgba(0,0,0,.5) 0%, rgba(0,0,0,0) 50%); }
   .wrap { position: fixed; inset: 0; display: flex; justify-content: space-between;
-    align-items: flex-end; padding: 6vh 4.5vw; box-sizing: border-box; }
+    flex-direction: row-reverse; align-items: flex-start; padding: 6vh 4.5vw; box-sizing: border-box; }
 
-  .time { text-shadow: 0 .3vw 2vw rgba(0,0,0,.45); }
+  .time { text-align: right; text-shadow: 0 .3vw 2vw rgba(0,0,0,.45); }
   .clock { font-size: 15vw; font-weight: 200; line-height: .85; letter-spacing: -.02em; }
   .clock .ampm { font-size: 3.4vw; font-weight: 300; letter-spacing: .05em; margin-left: .8vw; }
   .date { font-size: 3vw; font-weight: 300; margin-top: 2.2vh; opacity: .92; }
