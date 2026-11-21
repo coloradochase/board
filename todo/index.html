@@ -158,7 +158,50 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 /* Note button: touch screens only (desktop reveals notes on hover) */
 .note-btn { display: none; }
 .icon-btn.note-btn:hover { color: var(--accent); }
-.tabs { display: none; }
+/* Tabs: To-Do & Emails | Music on wide screens; To-Do | Emails | Music on phones */
+.tabs { display: flex; gap: 6px; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding: 4px 0 6px; }
+.tabs button { font: 500 14px var(--body); color: var(--muted); background: var(--sheet); border: 1px solid var(--line); border-radius: 999px; padding: 8px 18px; cursor: pointer; }
+.tabs button:hover { color: var(--ink); }
+.tabs button.on { background: var(--accent); border-color: var(--accent); color: var(--sheet); }
+.tabs .badge { font-family: var(--mono); font-size: 11px; margin-left: 6px; opacity: .85; }
+.tabs .wide-only { display: inline; }
+@media (min-width: 701px) { .tabs button[data-tab="mail"] { display: none; } }
+body.tabbed[data-tab="music"] .grid { display: none; }
+body:not([data-tab="music"]) .music { display: none; }
+
+/* Music: one block per song with a stage slider */
+.music { display: flex; flex-direction: column; gap: 16px; }
+.songs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 14px; }
+.song { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 12px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.song.done { border-color: var(--accent); }
+.song-top { display: flex; align-items: flex-start; gap: 6px; }
+.song-title { flex: 1; min-width: 0; display: block; border: 0; background: transparent; color: var(--ink); font: 700 18px/1.3 var(--display); padding: 4px 4px; margin-left: -4px; border-radius: 6px; resize: none; overflow: hidden; height: 32px; }
+.song-title:hover:not(:focus) { background: var(--bg); }
+.song-title:focus { outline: 2px solid var(--accent); outline-offset: 0; background: var(--bg); }
+.song .icon-btn { opacity: .5; flex: none; }
+.song:hover .icon-btn, .song .icon-btn:focus-visible { opacity: 1; }
+.song-stage { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.song-stage b { font: 500 14px var(--body); color: var(--ink); }
+.song.done .song-stage b { color: var(--accent); letter-spacing: .06em; }
+.song-stage span { font-family: var(--mono); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stage-range { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; margin: 0; background: transparent; cursor: pointer; --p: 0%; }
+.stage-range:focus { outline: none; }
+.stage-range::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--accent) var(--p), var(--line) var(--p)); }
+.stage-range::-moz-range-track { height: 6px; border-radius: 3px; background: var(--line); }
+.stage-range::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--accent); }
+.stage-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); border: 3px solid var(--sheet); box-shadow: 0 0 0 1px var(--accent); margin-top: -8px; }
+.stage-range::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 3px solid var(--sheet); box-shadow: 0 0 0 1px var(--accent); }
+.stage-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent); }
+.stage-labels { position: relative; height: 18px; margin: -4px 11px 0; }
+.stage-labels button { position: absolute; top: 0; transform: translateX(-50%); font: 500 10.5px var(--mono); letter-spacing: .02em; color: var(--muted); background: none; border: 0; padding: 2px 0; cursor: pointer; white-space: nowrap; }
+.stage-labels button:first-child { transform: translateX(-11px); }
+.stage-labels button:last-child { transform: translateX(calc(-100% + 11px)); }
+.stage-labels button.past { color: var(--accent); }
+.stage-labels button.cur { color: var(--ink); font-weight: 700; }
+.song-confirm { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+.song-confirm button { font: 500 13px var(--body); border: 0; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.song-confirm .yes { background: var(--danger); color: var(--sheet); }
+.song-confirm .no { background: var(--bg); color: var(--ink); }
 @media (hover: none) {
   .note:not([readonly]) { background: var(--bg); border-color: var(--line); }
   .note:not([readonly])::placeholder { color: var(--muted); }
@@ -192,10 +235,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   .section-label span:last-child { display: none; }
   .done-toggle span:last-child { display: inline; }
   /* To-Do / Emails tabs */
-  .tabs { display: flex; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding: 4px 0 6px; gap: 6px; }
-  .tabs button { flex: 1; font: 500 14px var(--body); color: var(--muted); background: var(--sheet); border: 1px solid var(--line); border-radius: 999px; padding: 10px 12px; cursor: pointer; }
-  .tabs button.on { background: var(--accent); border-color: var(--accent); color: var(--sheet); }
-  .tabs .badge { font-family: var(--mono); font-size: 11px; margin-left: 4px; opacity: .85; }
+  .tabs button { flex: 1; padding: 10px 8px; }
+  .tabs .badge { margin-left: 4px; }
+  .tabs .wide-only { display: none; }
+  .song-title { font-size: 17px; }
   body.tabbed[data-tab="mail"] .col { display: none; }
   body.tabbed[data-tab="todo"] .mail { display: none; }
   .mail-card { padding: 16px 14px; }
@@ -222,8 +265,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   </div>
 
   <nav class="tabs" id="tabs" aria-label="Sections" hidden>
-    <button type="button" data-tab="todo" class="on" aria-pressed="true">To-Do<span class="badge" id="tab-todo-n"></span></button>
+    <button type="button" data-tab="todo" class="on" aria-pressed="true">To-Do<span class="wide-only" id="tab-todo-and"> &amp; Emails</span><span class="badge" id="tab-todo-n"></span></button>
     <button type="button" data-tab="mail" aria-pressed="false">Emails<span class="badge" id="tab-mail-n"></span></button>
+    <button type="button" data-tab="music" aria-pressed="false" hidden>Music<span class="badge" id="tab-music-n"></span></button>
   </nav>
 
   <div class="grid" id="grid">
@@ -257,6 +301,15 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     <div class="mail-empty" id="mail-empty" hidden></div>
   </section>
   </div>
+
+  <section class="music" id="music" aria-label="Music" hidden>
+    <form class="adder" id="song-adder" autocomplete="off">
+      <input id="new-song" type="text" placeholder="Add a song and press Enter" aria-label="New song title" maxlength="120">
+      <button class="btn" type="submit">Add</button>
+    </form>
+    <div class="songs" id="songs"></div>
+    <div class="mail-empty" id="songs-empty" hidden>No songs yet. Add the first one above.</div>
+  </section>
 
   <div class="status" id="status">Loading the list…</div>
 </div>
@@ -578,10 +631,13 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   // ---------- emails (team only; the rules hide them from everyone else) ----------
   var mailTasks = null, mailMeta = null, mailUnsubs = [], mailHidden = {}, undoTimer = 0, lastHidden = null;
   var XICON = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8"/></svg>';
+  var wideMQ = window.matchMedia("(min-width: 701px)");
   function setTab(tab) {
     document.body.dataset.tab = tab;
     Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) {
-      var on = b.dataset.tab === tab; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false");
+      // On wide screens the To-Do tab also shows emails, so it stays lit for "mail" too.
+      var on = b.dataset.tab === tab || (tab === "mail" && b.dataset.tab === "todo" && wideMQ.matches);
+      b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false");
     });
     try { localStorage.setItem("todo-tab", tab); } catch (e) {}
     growAll();
@@ -589,12 +645,25 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   $("tabs").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) { setTab(b.dataset.tab); window.scrollTo(0, 0); } });
   (function () { var t = "todo"; try { t = localStorage.getItem("todo-tab") || "todo"; } catch (e) {} setTab(t); })();
 
+  var mailOK = false, musicOK = false;
+  function updateTabs() {
+    var any = mailOK || musicOK;
+    $("tabs").hidden = !any;
+    document.body.classList.toggle("tabbed", any);
+    document.querySelector('#tabs button[data-tab="mail"]').hidden = !mailOK;
+    document.querySelector('#tabs button[data-tab="music"]').hidden = !musicOK;
+    $("tab-todo-and").hidden = !mailOK;
+    $("music").hidden = !musicOK;
+    var t = document.body.dataset.tab;
+    if ((t === "music" && !musicOK) || (t === "mail" && !mailOK)) setTab("todo");
+    document.querySelector(".wrap").classList.toggle("wide", mailOK || (musicOK && t === "music"));
+  }
+  wideMQ.addEventListener && wideMQ.addEventListener("change", function () { setTab(document.body.dataset.tab || "todo"); });
   function showMail(on) {
+    mailOK = on;
     $("mail").hidden = !on;
-    $("tabs").hidden = !on;
-    document.body.classList.toggle("tabbed", on);
     $("grid").classList.toggle("has-mail", on);
-    document.querySelector(".wrap").classList.toggle("wide", on);
+    updateTabs();
   }
   function ago(ms) {
     var s = Math.max(0, (Date.now() - ms) / 1000);
@@ -687,11 +756,153 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   }
   setInterval(renderMail, 60000);
 
+  // ---------- music (team only) ----------
+  var STAGES = ["Idea", "Lyrics", "Prod", "Vox", "Finish for mix", "Mixed", "DONE"];
+  var SHORT = ["Idea", "Lyrics", "Prod", "Vox", "Finish", "Mixed", "DONE"];
+  var songs = null, songsUnsub = null, songConfirm = null, songDrag = false, songRenderQueued = false;
+  function songCol() { return col.firestore.collection("songs"); }
+  function sortedSongs() {
+    return (songs || []).slice().sort(function (a, b) {
+      var da = a.stage >= 6, db = b.stage >= 6;
+      if (da !== db) return da ? 1 : -1;
+      if (da) return (b.updatedAt || 0) - (a.updatedAt || 0);
+      return (a.order || 0) - (b.order || 0);
+    });
+  }
+  function paintStage(card, stage) {
+    card.classList.toggle("done", stage >= 6);
+    card.querySelector(".song-stage b").textContent = STAGES[stage];
+    card.querySelector(".song-stage span").textContent = stage >= 6 ? "Finished" : "Step " + (stage + 1) + " of 7";
+    var r = card.querySelector(".stage-range"); r.value = stage; r.style.setProperty("--p", (stage / 6 * 100) + "%");
+    r.setAttribute("aria-valuetext", STAGES[stage]);
+    Array.prototype.forEach.call(card.querySelectorAll(".stage-labels button"), function (b, i) {
+      b.classList.toggle("past", i < stage); b.classList.toggle("cur", i === stage);
+    });
+  }
+  function songCard(sg) {
+    var card = document.createElement("div");
+    card.className = "song"; card.dataset.id = sg.id;
+    var top = document.createElement("div"); top.className = "song-top";
+    var t = document.createElement("textarea");
+    t.className = "song-title"; t.rows = 1; t.maxLength = 120; t.value = sg.title || ""; t.setAttribute("aria-label", "Song title");
+    top.appendChild(t);
+    if (songConfirm === sg.id) {
+      var cf = document.createElement("div"); cf.className = "song-confirm";
+      cf.innerHTML = '<span>Delete?</span><button class="yes" type="button">Delete</button><button class="no" type="button">Keep</button>';
+      top.appendChild(cf);
+    } else {
+      var del = document.createElement("button"); del.type = "button"; del.className = "icon-btn song-del"; del.setAttribute("aria-label", "Delete song"); del.innerHTML = TRASH;
+      top.appendChild(del);
+    }
+    card.appendChild(top);
+    var st = document.createElement("div"); st.className = "song-stage"; st.innerHTML = "<b></b><span></span>";
+    card.appendChild(st);
+    var r = document.createElement("input");
+    r.type = "range"; r.min = 0; r.max = 6; r.step = 1; r.className = "stage-range"; r.setAttribute("aria-label", "Stage for " + (sg.title || "song"));
+    card.appendChild(r);
+    var labels = document.createElement("div"); labels.className = "stage-labels";
+    SHORT.forEach(function (name, i) {
+      var b = document.createElement("button"); b.type = "button"; b.textContent = name; b.dataset.stage = i;
+      b.style.left = (i / 6 * 100) + "%"; b.setAttribute("aria-label", "Set stage to " + STAGES[i]);
+      labels.appendChild(b);
+    });
+    card.appendChild(labels);
+    paintStage(card, Math.max(0, Math.min(6, sg.stage || 0)));
+    return card;
+  }
+  function renderSongs() {
+    if (songDrag) { songRenderQueued = true; return; }
+    var box = $("songs");
+    var active = document.activeElement, keep = null;
+    if (active && active.classList && active.classList.contains("song-title")) keep = { id: active.closest(".song").dataset.id, value: active.value, start: active.selectionStart, end: active.selectionEnd };
+    box.innerHTML = "";
+    var list = sortedSongs();
+    list.forEach(function (sg) { box.appendChild(songCard(sg)); });
+    $("songs-empty").hidden = list.length > 0;
+    var open = list.filter(function (x) { return (x.stage || 0) < 6; }).length;
+    $("tab-music-n").textContent = open || "";
+    Array.prototype.forEach.call(box.querySelectorAll(".song-title"), grow);
+    if (keep) {
+      var el = box.querySelector('.song[data-id="' + keep.id + '"] .song-title');
+      if (el) { el.value = keep.value; el.focus(); try { el.setSelectionRange(keep.start, keep.end); } catch (e) {} grow(el); }
+    }
+  }
+  function findSong(id) { return (songs || []).filter(function (x) { return x.id === id; })[0]; }
+  function saveSong(id, patch) {
+    var sg = findSong(id); if (sg) Object.assign(sg, patch);
+    patch.updatedAt = Date.now();
+    return songCol().doc(id).update(patch).catch(denied);
+  }
+  $("song-adder").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var input = $("new-song"), v = input.value.trim();
+    if (!v || !musicOK) return;
+    var min = (songs || []).reduce(function (m, x) { return Math.min(m, x.order || 0); }, 0);
+    var data = { title: v, stage: 0, order: min - 1000, createdAt: Date.now(), updatedAt: Date.now() };
+    var ref = songCol().doc();
+    songs = (songs || []).concat([Object.assign({ id: ref.id }, data)]); renderSongs();
+    ref.set(data).catch(denied);
+    input.value = "";
+  });
+  var songsBox = $("songs");
+  songsBox.addEventListener("input", function (e) {
+    var card = e.target.closest(".song"); if (!card) return;
+    if (e.target.classList.contains("stage-range")) paintStage(card, Number(e.target.value));
+    if (e.target.classList.contains("song-title")) grow(e.target);
+  });
+  songsBox.addEventListener("change", function (e) {
+    if (!e.target.classList.contains("stage-range")) return;
+    var id = e.target.closest(".song").dataset.id, v = Number(e.target.value);
+    songDrag = false;
+    var sg = findSong(id); if (sg && sg.stage === v) return;
+    saveSong(id, { stage: v });
+    if (songRenderQueued) { songRenderQueued = false; renderSongs(); }
+  });
+  songsBox.addEventListener("pointerdown", function (e) { if (e.target.classList.contains("stage-range")) songDrag = true; });
+  document.addEventListener("pointerup", function () {
+    if (songDrag) { songDrag = false; if (songRenderQueued) { songRenderQueued = false; setTimeout(renderSongs, 50); } }
+  });
+  songsBox.addEventListener("click", function (e) {
+    var card = e.target.closest(".song"); if (!card) return;
+    var id = card.dataset.id;
+    var lb = e.target.closest(".stage-labels button");
+    if (lb) { var v = Number(lb.dataset.stage); paintStage(card, v); var sg = findSong(id); if (!sg || sg.stage !== v) saveSong(id, { stage: v }); return; }
+    if (e.target.closest(".song-del")) { songConfirm = id; renderSongs(); return; }
+    if (e.target.closest(".song-confirm .no")) { songConfirm = null; renderSongs(); return; }
+    if (e.target.closest(".song-confirm .yes")) {
+      songConfirm = null; songs = (songs || []).filter(function (x) { return x.id !== id; }); renderSongs();
+      songCol().doc(id).delete().catch(denied);
+    }
+  });
+  songsBox.addEventListener("keydown", function (e) {
+    if (e.target.classList.contains("song-title") && e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+  });
+  songsBox.addEventListener("focusout", function (e) {
+    if (!e.target.classList.contains("song-title")) return;
+    var id = e.target.closest(".song").dataset.id, sg = findSong(id);
+    var v = e.target.value.replace(/\s*\n\s*/g, " ").trim();
+    if (!sg) return;
+    if (!v) { e.target.value = sg.title; grow(e.target); return; }
+    if (v !== sg.title) saveSong(id, { title: v });
+  });
+  function startMusic() {
+    stopMusic();
+    songsUnsub = songCol().onSnapshot(function (snap) {
+      songs = snap.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); });
+      musicOK = true; updateTabs(); renderSongs();
+    }, function () { stopMusic(); });   // not on the team list: no Music tab
+  }
+  function stopMusic() {
+    if (songsUnsub) { try { songsUnsub(); } catch (e) {} }
+    songsUnsub = null; songs = null; musicOK = false; updateTabs();
+  }
+  $("tabs").addEventListener("click", function () { setTimeout(function () { updateTabs(); if (document.body.dataset.tab === "music") renderSongs(); }, 0); });
+
   auth.onAuthStateChanged(function (u) {
     user = u;
     canEdit = !!u;   // the database rules have the final say; a refused write shows a message
     setEditMode();
-    if (u) startMail(); else stopMail();
+    if (u) { startMail(); startMusic(); } else { stopMail(); stopMusic(); }
   });
 })();
 </script>
