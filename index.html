@@ -24,10 +24,15 @@
   .clock .ampm { font-size: 3.4vw; font-weight: 300; letter-spacing: .05em; margin-left: .8vw; }
   .date { font-size: 3vw; font-weight: 300; margin-top: 2.2vh; opacity: .92; }
 
-  .panel { width: 33vw; max-height: 86vh; overflow: hidden; background: rgba(0,0,0,.38);
+  .panel { width: 33vw; max-height: 88vh; overflow: hidden; background: rgba(0,0,0,.38);
     border-radius: 1.4vw; padding: 2.4vw 2.4vw 1.6vw; box-sizing: border-box; }
-  .panel h2 { margin: 0 0 1.6vw; font-size: 1.25vw; font-weight: 500; letter-spacing: .25em;
+  .panel.fade { height: 88vh;
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%); }
+  .day { margin: 2vw 0 1.1vw; font-size: 1.2vw; font-weight: 500; letter-spacing: .25em;
     text-transform: uppercase; opacity: .7; }
+  .day:first-child { margin-top: 0; }
+  .none { font-size: 1.3vw; font-weight: 300; opacity: .6; margin-bottom: 1.3vw; }
   .ev { display: flex; gap: 1.1vw; margin-bottom: 1.3vw; align-items: stretch; }
   .ev .bar { width: .35vw; border-radius: .2vw; flex: none; }
   .ev .when { font-size: 1.2vw; font-weight: 400; opacity: .75; margin-bottom: .2vw; }
@@ -54,8 +59,7 @@
     <div class="clock" id="clock"></div>
     <div class="date" id="date"></div>
   </div>
-  <div class="panel">
-    <h2>Today</h2>
+  <div class="panel" id="panel">
     <div id="events"></div>
   </div>
 </div>
@@ -69,7 +73,7 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbxw3SW86lU8h2_EsXb0Pr71CA
 var CALENDAR_REFRESH_MIN = 5;   // how often to check for calendar changes
 var PHOTO_CHANGE_MIN = 10;      // how often the background photo changes
 var NIGHTLY_RELOAD_HOUR = 3;    // full page reload at 3 AM keeps the TV browser fresh
-var MAX_EVENTS = 8;
+var MAX_EVENTS = 40;            // anything past what fits fades out at the bottom
 // ====================
 
 var hash = location.hash;
@@ -153,10 +157,27 @@ function fetchCalendar() {
     });
 }
 
+var MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function dayKeyOf(ev, today) {
+  var k = ev.allDay ? ev.start : ymd(new Date(ev.start));
+  return k < today ? today : k;
+}
+function dayLabel(k, today) {
+  if (k === today) return 'Today';
+  var t = new Date(); t.setDate(t.getDate() + 1);
+  if (k === ymd(t)) return 'Tomorrow';
+  var p = k.split('-');
+  var d = new Date(+p[0], +p[1] - 1, +p[2]);
+  return DAYS[d.getDay()] + ', ' + MONTHS_SHORT[d.getMonth()] + ' ' + d.getDate();
+}
+
 function render() {
   var box = document.getElementById('events');
+  var panel = document.getElementById('panel');
   var now = new Date();
   var today = ymd(now);
+  panel.className = 'panel';
 
   if (!data) {
     box.innerHTML = '<div class="empty">' + esc(lastError || 'Loading…') + '</div>';
@@ -167,17 +188,31 @@ function render() {
     return;
   }
 
-  var evs = data.events || [];
-  if (!evs.length) {
-    box.innerHTML = '<div class="empty">Nothing on the calendar today.</div>';
-    return;
-  }
-
   var startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  var html = '';
-  var shown = evs.slice(0, MAX_EVENTS);
 
-  shown.forEach(function (ev) {
+  // Drop all-day events that already ended, tag each with its display day, sort.
+  var evs = (data.events || []).filter(function (ev) {
+    return ev.allDay ? ev.end > today : true;
+  }).map(function (ev) {
+    ev._day = dayKeyOf(ev, today);
+    return ev;
+  });
+  evs.sort(function (a, b) {
+    if (a._day !== b._day) return a._day < b._day ? -1 : 1;
+    if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
+    return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
+  });
+  evs = evs.slice(0, MAX_EVENTS);
+
+  var html = '<div class="day">Today</div>';
+  var current = today;
+  if (!evs.length || evs[0]._day !== today) html += '<div class="none">Nothing on today</div>';
+
+  evs.forEach(function (ev) {
+    if (ev._day !== current) {
+      current = ev._day;
+      html += '<div class="day">' + dayLabel(current, today) + '</div>';
+    }
     var cls = 'ev', when, tag = '';
     if (ev.allDay) {
       when = 'All day';
@@ -194,10 +229,14 @@ function render() {
       (ev.location ? '<div class="loc">' + esc(ev.location) + '</div>' : '') +
       '</div></div>';
   });
-  if (evs.length > MAX_EVENTS) {
-    html += '<div class="more">+ ' + (evs.length - MAX_EVENTS) + ' more</div>';
+
+  if (evs.length && evs[evs.length - 1]._day === today && evs.length < MAX_EVENTS) {
+    html += '<div class="day">Coming up</div><div class="none">Nothing else in the next two weeks</div>';
   }
   box.innerHTML = html;
+
+  // Fade into the bottom only when the list is longer than the panel.
+  if (box.scrollHeight > window.innerHeight * 0.88 - 40) panel.className = 'panel fade';
 }
 
 function updateStatus() {
@@ -231,15 +270,21 @@ function nextPhoto() {
 // ----- Demo data (open the page with #demo to preview) -----
 function demoData() {
   var d = new Date();
-  function at(h, m) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m).toISOString(); }
-  var hr = d.getHours();
+  function at(dd, h, m) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + dd, h, m).toISOString(); }
+  function day(dd) { return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() + dd)); }
   return {
     date: ymd(d), updated: d.toISOString(),
     events: [
-      { title: 'Studio day', allDay: true, start: ymd(d), end: ymd(d), color: '#33b679', location: '' },
-      { title: 'Gym', allDay: false, start: at(Math.max(hr - 3, 0), 0), end: at(Math.max(hr - 2, 0), 0), color: '#039be5', location: '' },
-      { title: 'Call with booking agent', allDay: false, start: at(hr, 0), end: at(Math.min(hr + 1, 23), 0), color: '#f4511e', location: 'Zoom' },
-      { title: 'Rehearsal', allDay: false, start: at(Math.min(hr + 2, 23), 30), end: at(Math.min(hr + 3, 23), 59), color: '#8e24aa', location: 'Downtown Denver' }
+      { title: 'Studio day', allDay: true, start: day(0), end: day(1), color: '#33b679', location: '' },
+      { title: 'Call with booking agent', allDay: false, start: at(0, 14, 0), end: at(0, 15, 0), color: '#f4511e', location: 'Zoom' },
+      { title: 'Rehearsal', allDay: false, start: at(1, 18, 30), end: at(1, 21, 0), color: '#8e24aa', location: 'Downtown Denver' },
+      { title: 'Gym', allDay: false, start: at(2, 8, 0), end: at(2, 9, 0), color: '#039be5', location: '' },
+      { title: 'Mix session', allDay: false, start: at(2, 13, 0), end: at(2, 17, 0), color: '#33b679', location: '' },
+      { title: 'Flight to LA', allDay: false, start: at(4, 7, 15), end: at(4, 9, 5), color: '#f6bf26', location: 'DEN' },
+      { title: 'Show: Los Angeles', allDay: false, start: at(4, 22, 0), end: at(4, 23, 59), color: '#d50000', location: 'Hollywood' },
+      { title: 'Flight home', allDay: false, start: at(5, 12, 0), end: at(5, 14, 30), color: '#f6bf26', location: 'LAX' },
+      { title: 'Content shoot', allDay: false, start: at(7, 11, 0), end: at(7, 15, 0), color: '#8e24aa', location: '' },
+      { title: 'Management call', allDay: false, start: at(8, 10, 0), end: at(8, 11, 0), color: '#039be5', location: '' }
     ]
   };
 }
