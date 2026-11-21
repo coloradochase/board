@@ -105,6 +105,15 @@ body {
 .mail-item:hover .mc-x, .mc-x:focus-visible { opacity: 1; }
 .mc-x:hover { background: var(--accent-soft); color: var(--ink); }
 .mail-undo { position: fixed; z-index: 50; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom)); width: min(420px, calc(100% - 24px)); box-sizing: border-box; border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.25); display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px 10px 16px; font-size: 13px; color: var(--sheet); background: var(--ink); }
+.mail-acts { display: inline-flex; gap: 12px; align-items: center; }
+.mail-toggle { font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); background: none; border: 0; cursor: pointer; padding: 0; white-space: nowrap; }
+.mail-hidden { border-top: 1px solid var(--line); background: var(--bg); }
+.mail-hidden-head { padding: 10px 16px 4px; font: 600 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.mail-item.is-hidden .mail-card { opacity: .6; }
+.mail-item.is-hidden .mail-card:hover { opacity: 1; }
+.mc-restore { position: absolute; top: 12px; right: 10px; font: 600 12px var(--body); color: var(--accent); background: var(--sheet); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+.mc-restore:hover { border-color: var(--accent); }
+.mail-item.is-hidden .mail-card { padding-right: 96px; }
 .mail-undo span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mail-undo button { flex: none; }
 .mail-item.leaving { overflow: hidden; opacity: 0; border-bottom-color: transparent; transition: height .22s ease, opacity .16s ease; pointer-events: none; }
@@ -150,12 +159,11 @@ ol { list-style: none; margin: 0; padding: 0; }
 .row > .handle, .row > .grip-gap { grid-area: h; }
 .row > .num { grid-area: n; height: 36px; display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
 /* Urgent flag: a small native dropdown hidden over a flag icon */
-.prio { position: relative; width: 22px; height: 26px; display: grid; place-items: center; border-radius: 6px; color: var(--muted); opacity: .45; cursor: pointer; }
-.item:hover .prio, .prio:focus-within { opacity: 1; }
+.prio { position: relative; width: 22px; height: 26px; display: grid; place-items: center; border: 0; background: transparent; padding: 0; border-radius: 6px; color: var(--muted); opacity: .45; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.item:hover .prio, .prio:focus-visible { opacity: 1; }
 .prio:hover { background: var(--bg); }
 .prio svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; stroke-linecap: round; }
-.prio select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
-.prio:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.prio:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .item.urgent { background: var(--urgent-bg); box-shadow: inset 4px 0 0 var(--urgent); }
 .item.urgent .prio { color: var(--urgent); opacity: 1; }
 .item.urgent .prio svg { fill: currentColor; }
@@ -362,7 +370,8 @@ a.ev:hover { background: var(--bg); }
   .note { font-size: 14px; }
   .adder input { font-size: 16px; }   /* 16px stops iPhone zooming in on tap */
   .note, .title { -webkit-user-select: text; }
-  .section-label span:last-child:not(.cal-acts) { display: none; }
+  .section-label span:last-child:not(.cal-acts):not(.mail-acts) { display: none; }
+  #mail-updated { display: none; }
   .done-toggle span:last-child { display: inline; }
   /* To-Do / Emails tabs */
   .tabs button { flex: 1; padding: 10px 8px; }
@@ -442,10 +451,14 @@ a.ev:hover { background: var(--bg); }
   </div>
 
   <section class="sheet mail" id="mail" aria-label="Emails" hidden>
-    <div class="section-label"><span>Emails</span><span id="mail-updated"></span></div>
+    <div class="section-label"><span>Emails</span><span class="mail-acts"><span id="mail-updated"></span><button type="button" class="mail-toggle" id="mail-show-hidden" aria-expanded="false" hidden></button></span></div>
     <div class="mail-undo" id="mail-undo" role="status" hidden><span id="mail-undo-text">Email hidden</span><button type="button" id="mail-undo-btn">Undo</button></div>
     <div class="mail-list" id="mail-list"></div>
     <div class="mail-empty" id="mail-empty" hidden></div>
+    <div class="mail-hidden" id="mail-hidden" hidden>
+      <div class="mail-hidden-head">Hidden</div>
+      <div id="mail-hidden-list"></div>
+    </div>
   </section>
   </div>
 
@@ -555,8 +568,7 @@ a.ev:hover { background: var(--bg); }
     row.innerHTML =
       (isDone ? '<span class="grip-gap"></span>' : '<button class="handle" type="button" aria-label="Reorder (drag, or use arrow keys)">' + GRIP + '</button>') +
       '<span class="num">' + (isDone ? "" : pad(idx + 1) +
-        '<label class="prio" title="Priority">' + FLAG +
-        '<select aria-label="Priority"' + (canEdit ? "" : " disabled") + '><option value="">Normal</option><option value="urgent"' + (t.priority === "urgent" ? " selected" : "") + '>Urgent</option></select></label>') + '</span>' +
+        '<button class="prio" type="button" aria-pressed="' + (t.priority === "urgent" ? "true" : "false") + '" aria-label="Urgent" title="' + (t.priority === "urgent" ? "Urgent (tap to clear)" : "Mark urgent") + '"' + (canEdit ? "" : " disabled") + '>' + FLAG + '</button>') + '</span>' +
       '<button class="check" type="button" role="checkbox" aria-checked="' + (t.done ? "true" : "false") + '" aria-label="Mark complete"' + (canEdit ? "" : " disabled") + '>' + TICK + '</button>' +
       '<textarea class="title" rows="1" maxlength="300" aria-label="Task"' + ro + '></textarea>' +
       ((canEdit || t.notes) ? '<div class="note-cell' + (t.notes ? '' : ' no-note') + '"><textarea class="note" id="note-' + t.id + '" rows="1" placeholder="Add a note…" aria-label="Notes for task"' + ro + '></textarea></div>' : '') +
@@ -748,11 +760,12 @@ a.ev:hover { background: var(--bg); }
         e.preventDefault(); moveBy(e.target.closest(".item").dataset.id, e.key === "ArrowUp" ? -1 : 1);
       }
     });
-    list.addEventListener("change", function (e) {
-      if (!e.target.closest(".prio")) return;
-      var li = e.target.closest(".item"), t = li && find(li.dataset.id); if (!t || !canEdit) return;
-      if (e.target.value === "urgent") write(t.id, { priority: "urgent" });
+    list.addEventListener("click", function (e) {   // one tap on the flag: urgent on / off
+      var b = e.target.closest(".prio"); if (!b) return;
+      var li = b.closest(".item"), t = li && find(li.dataset.id); if (!t || !canEdit) return;
+      if (t.priority !== "urgent") write(t.id, { priority: "urgent" });
       else { delete t.priority; render(); col.doc(t.id).update({ priority: firebase.firestore.FieldValue.delete() }).catch(denied); }
+      var nb = document.querySelector('.item[data-id="' + t.id + '"] .prio'); if (nb && e.detail === 0) nb.focus();   // keep keyboard focus
     });
     list.addEventListener("input", function (e) {
       if (e.target.classList.contains("note")) { grow(e.target); saveNote(e.target, false); }
@@ -838,7 +851,7 @@ a.ev:hover { background: var(--bg); }
   });
 
   // ---------- emails (team only; the rules hide them from everyone else) ----------
-  var mailNodes = {}, mailTasks = null, mailMeta = null, mailUnsubs = [], mailHidden = {}, undoTimer = 0, lastHidden = null;
+  var showHidden = false, mailNodes = {}, mailTasks = null, mailMeta = null, mailUnsubs = [], mailHidden = {}, undoTimer = 0, lastHidden = null;
   var XICON = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8"/></svg>';
   var wideMQ = window.matchMedia("(min-width: 701px)");
   function setTab(tab) {
@@ -940,8 +953,41 @@ a.ev:hover { background: var(--bg); }
       wrap.dataset.id = m.id;
       return wrap;
   }
+  function isHidden(m) { var h = mailHidden[m.id]; return !!(h && (m.lastDate || 0) <= (h.lastDate || 0)); }
+  function renderHidden() {
+    var hid = (mailTasks || []).filter(isHidden).sort(function (a, b) { return (b.lastDate || 0) - (a.lastDate || 0); });
+    if (!hid.length) showHidden = false;
+    var btn = $("mail-show-hidden");
+    btn.hidden = !hid.length || !canEdit;
+    btn.textContent = showHidden ? "Hide hidden" : "Show hidden (" + hid.length + ")";
+    btn.setAttribute("aria-expanded", showHidden ? "true" : "false");
+    $("mail-hidden").hidden = !showHidden;
+    var box = $("mail-hidden-list"); box.innerHTML = "";
+    if (!showHidden) return;
+    hid.forEach(function (m) {
+      var wrap = buildMail(m);
+      wrap.classList.add("is-hidden");
+      var x = wrap.querySelector(".mc-x"); if (x) x.remove();
+      var r = document.createElement("button");
+      r.type = "button"; r.className = "mc-restore"; r.textContent = "Restore";
+      r.setAttribute("aria-label", "Restore " + (m.title || "this email"));
+      r.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); restoreMail(m); });
+      wrap.appendChild(r);
+      box.appendChild(wrap);
+    });
+  }
+  function restoreMail(m) {
+    var prev = mailHidden[m.id];
+    if (lastHidden && lastHidden.id === m.id) { lastHidden = null; $("mail-undo").hidden = true; clearTimeout(undoTimer); }
+    delete mailHidden[m.id]; renderMail();
+    col.firestore.collection("emailsHidden").doc(m.id).delete().catch(function (e) {
+      mailHidden[m.id] = prev; renderMail(); denied(e);
+    });
+  }
+  $("mail-show-hidden").addEventListener("click", function () { showHidden = !showHidden; renderHidden(); });
   function finishMail(items) {
     var empty = $("mail-empty");
+    renderHidden();
     empty.hidden = items.length > 0;
     var need = items.filter(function (m) { return m.status === "Needs reply"; }).length;
     $("tab-mail-n").textContent = need ? need : "";
@@ -998,6 +1044,7 @@ a.ev:hover { background: var(--bg); }
     mailUnsubs.forEach(function (u) { try { u(); } catch (e) {} });
     mailUnsubs = []; mailTasks = null; mailMeta = null; mailHidden = {}; showMail(false);
     mailNodes = {}; $("mail-list").innerHTML = "";
+    showHidden = false; $("mail-hidden").hidden = true; $("mail-hidden-list").innerHTML = ""; $("mail-show-hidden").hidden = true;
   }
   setInterval(renderMail, 60000);
 
