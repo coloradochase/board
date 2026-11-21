@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color: #fff;
+    font-family: 'Outfit', system-ui, sans-serif; cursor: none; }
+  .bg { position: fixed; inset: 0; background-size: cover; background-position: center;
+    opacity: 0; transition: opacity 3s ease; }
+  .bg.show { opacity: 1; }
+  .shade { position: fixed; inset: 0;
+    background: linear-gradient(90deg, rgba(0,0,0,.6) 0%, rgba(0,0,0,.2) 45%, rgba(0,0,0,.6) 100%),
+                linear-gradient(0deg, rgba(0,0,0,.5) 0%, rgba(0,0,0,0) 50%); }
+  .wrap { position: fixed; inset: 0; display: flex; justify-content: space-between;
+    align-items: flex-end; padding: 6vh 4.5vw; box-sizing: border-box; }
+
+  .time { text-shadow: 0 .3vw 2vw rgba(0,0,0,.45); }
+  .clock { font-size: 15vw; font-weight: 200; line-height: .85; letter-spacing: -.02em; }
+  .clock .ampm { font-size: 3.4vw; font-weight: 300; letter-spacing: .05em; margin-left: .8vw; }
+  .date { font-size: 3vw; font-weight: 300; margin-top: 2.2vh; opacity: .92; }
+
+  .panel { width: 33vw; max-height: 86vh; overflow: hidden; background: rgba(0,0,0,.38);
+    border-radius: 1.4vw; padding: 2.4vw 2.4vw 1.6vw; box-sizing: border-box; }
+  .panel h2 { margin: 0 0 1.6vw; font-size: 1.25vw; font-weight: 500; letter-spacing: .25em;
+    text-transform: uppercase; opacity: .7; }
+  .ev { display: flex; gap: 1.1vw; margin-bottom: 1.3vw; align-items: stretch; }
+  .ev .bar { width: .35vw; border-radius: .2vw; flex: none; }
+  .ev .when { font-size: 1.2vw; font-weight: 400; opacity: .75; margin-bottom: .2vw; }
+  .ev .title { font-size: 1.75vw; font-weight: 400; line-height: 1.2; }
+  .ev .loc { font-size: 1.1vw; opacity: .6; margin-top: .2vw; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 26vw; }
+  .ev.past { opacity: .4; }
+  .ev.now .when { opacity: 1; font-weight: 500; }
+  .tag { display: inline-block; font-size: .9vw; font-weight: 500; letter-spacing: .15em;
+    padding: .15vw .55vw; border-radius: .3vw; background: rgba(255,255,255,.9); color: #000;
+    margin-left: .6vw; vertical-align: .15vw; }
+  .empty { font-size: 1.6vw; font-weight: 300; opacity: .8; }
+  .more { font-size: 1.1vw; opacity: .6; }
+  .status { position: fixed; right: 4.5vw; bottom: 2vh; font-size: .9vw; opacity: .5; }
+</style>
+</head>
+<body>
+<div class="bg" id="bgA"></div>
+<div class="bg" id="bgB"></div>
+<div class="shade"></div>
+
+<div class="wrap">
+  <div class="time">
+    <div class="clock" id="clock"></div>
+    <div class="date" id="date"></div>
+  </div>
+  <div class="panel">
+    <h2>Today</h2>
+    <div id="events"></div>
+  </div>
+</div>
+<div class="status" id="status"></div>
+
+<script>
+// ===== Settings =====
+// Paste your Apps Script web app URL (ends in /exec) here.
+// Your token is NOT stored here: add it to the board's address as #k=yourtoken
+var API_URL = 'https://script.google.com/macros/s/AKfycbxw3SW86lU8h2_EsXb0Pr71CATEgyezsodMCAV0w3CK781BfMXZm8mEV4JL-bdyL3wq3g/exec';
+var CALENDAR_REFRESH_MIN = 5;   // how often to check for calendar changes
+var PHOTO_CHANGE_MIN = 10;      // how often the background photo changes
+var NIGHTLY_RELOAD_HOUR = 3;    // full page reload at 3 AM keeps the TV browser fresh
+var MAX_EVENTS = 8;
+// ====================
+
+var hash = location.hash;
+var DEMO = /demo/.test(hash);
+var loadedAt = Date.now();
+var data = null;
+var lastOk = 0;
+var lastError = '';
+
+function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+function getToken() {
+  var m = hash.match(/k=([^&]+)/);
+  if (m) { var t = decodeURIComponent(m[1]); store('boardToken', t); return t; }
+  return recall('boardToken');
+}
+var TOKEN = getToken();
+
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function fmtTime(d) {
+  var h = d.getHours() % 12 || 12;
+  return h + ':' + pad(d.getMinutes()) + ' ' + (d.getHours() < 12 ? 'AM' : 'PM');
+}
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+  });
+}
+
+// ----- Clock -----
+var DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+var MONTHS = ['January','February','March','April','May','June','July','August',
+  'September','October','November','December'];
+var lastMinute = -1, lastDay = '';
+
+function tick() {
+  var now = new Date();
+  if (now.getMinutes() !== lastMinute) {
+    lastMinute = now.getMinutes();
+    var h = now.getHours() % 12 || 12;
+    document.getElementById('clock').innerHTML =
+      h + ':' + pad(now.getMinutes()) + '<span class="ampm">' + (now.getHours() < 12 ? 'AM' : 'PM') + '</span>';
+    document.getElementById('date').textContent =
+      DAYS[now.getDay()] + ', ' + MONTHS[now.getMonth()] + ' ' + now.getDate();
+
+    var today = ymd(now);
+    if (lastDay && today !== lastDay) fetchCalendar();   // new day: get the new day's events
+    lastDay = today;
+
+    render();
+    updateStatus();
+
+    if (now.getHours() === NIGHTLY_RELOAD_HOUR && now.getMinutes() === 0 &&
+        Date.now() - loadedAt > 60 * 60 * 1000) {
+      location.reload();
+    }
+  }
+  setTimeout(tick, 1000 - now.getMilliseconds() + 20);
+}
+
+// ----- Calendar -----
+function fetchCalendar() {
+  if (DEMO) { data = demoData(); lastOk = Date.now(); render(); return; }
+  if (!TOKEN) { lastError = 'Add #k=yourtoken to the end of this page’s address.'; render(); return; }
+  if (API_URL.indexOf('http') !== 0) { lastError = 'Paste your Apps Script URL into API_URL in index.html.'; render(); return; }
+
+  var url = API_URL + '?token=' + encodeURIComponent(TOKEN) + '&t=' + Date.now();
+  fetch(url, { redirect: 'follow' })
+    .then(function (r) { return r.json(); })
+    .then(function (json) {
+      if (json.error) throw new Error(json.error === 'unauthorized' ? 'Token doesn’t match the one in Code.gs.' : json.error);
+      data = json; lastOk = Date.now(); lastError = '';
+      store('boardCache', JSON.stringify(json));
+      render(); updateStatus();
+    })
+    .catch(function (err) {
+      lastError = err && err.message ? err.message : 'Could not reach calendar.';
+      render(); updateStatus();
+    });
+}
+
+function render() {
+  var box = document.getElementById('events');
+  var now = new Date();
+  var today = ymd(now);
+
+  if (!data) {
+    box.innerHTML = '<div class="empty">' + esc(lastError || 'Loading…') + '</div>';
+    return;
+  }
+  if (data.date !== today) {
+    box.innerHTML = '<div class="empty">Updating…</div>';
+    return;
+  }
+
+  var evs = data.events || [];
+  if (!evs.length) {
+    box.innerHTML = '<div class="empty">Nothing on the calendar today.</div>';
+    return;
+  }
+
+  var startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var html = '';
+  var shown = evs.slice(0, MAX_EVENTS);
+
+  shown.forEach(function (ev) {
+    var cls = 'ev', when, tag = '';
+    if (ev.allDay) {
+      when = 'All day';
+    } else {
+      var s = new Date(ev.start), e = new Date(ev.end);
+      if (e <= now) cls += ' past';
+      else if (s <= now) { cls += ' now'; tag = '<span class="tag">NOW</span>'; }
+      when = s < startOfDay ? 'Until ' + fmtTime(e) : fmtTime(s) + ' – ' + fmtTime(e);
+    }
+    html += '<div class="' + cls + '">' +
+      '<div class="bar" style="background:' + esc(ev.color || '#fff') + '"></div>' +
+      '<div><div class="when">' + when + tag + '</div>' +
+      '<div class="title">' + esc(ev.title) + '</div>' +
+      (ev.location ? '<div class="loc">' + esc(ev.location) + '</div>' : '') +
+      '</div></div>';
+  });
+  if (evs.length > MAX_EVENTS) {
+    html += '<div class="more">+ ' + (evs.length - MAX_EVENTS) + ' more</div>';
+  }
+  box.innerHTML = html;
+}
+
+function updateStatus() {
+  var el = document.getElementById('status');
+  var stale = lastOk && Date.now() - lastOk > (CALENDAR_REFRESH_MIN * 3) * 60 * 1000;
+  if (data && (lastError || stale)) {
+    el.textContent = 'Calendar offline · last updated ' + fmtTime(new Date(lastOk || Date.parse(data.updated)));
+  } else {
+    el.textContent = '';
+  }
+}
+
+// ----- Background photos -----
+var showingA = false;
+function nextPhoto() {
+  var w = Math.min(2560, Math.round(screen.width * (window.devicePixelRatio || 1))) || 1920;
+  var h = Math.round(w * 9 / 16);
+  var src = 'https://picsum.photos/' + w + '/' + h + '?random=' + Date.now();
+  var img = new Image();
+  img.onload = function () {
+    var next = document.getElementById(showingA ? 'bgB' : 'bgA');
+    var prev = document.getElementById(showingA ? 'bgA' : 'bgB');
+    next.style.backgroundImage = 'url("' + img.src + '")';
+    next.classList.add('show');
+    prev.classList.remove('show');
+    showingA = !showingA;
+  };
+  img.src = src;
+}
+
+// ----- Demo data (open the page with #demo to preview) -----
+function demoData() {
+  var d = new Date();
+  function at(h, m) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m).toISOString(); }
+  var hr = d.getHours();
+  return {
+    date: ymd(d), updated: d.toISOString(),
+    events: [
+      { title: 'Studio day', allDay: true, start: ymd(d), end: ymd(d), color: '#33b679', location: '' },
+      { title: 'Gym', allDay: false, start: at(Math.max(hr - 3, 0), 0), end: at(Math.max(hr - 2, 0), 0), color: '#039be5', location: '' },
+      { title: 'Call with booking agent', allDay: false, start: at(hr, 0), end: at(Math.min(hr + 1, 23), 0), color: '#f4511e', location: 'Zoom' },
+      { title: 'Rehearsal', allDay: false, start: at(Math.min(hr + 2, 23), 30), end: at(Math.min(hr + 3, 23), 59), color: '#8e24aa', location: 'Downtown Denver' }
+    ]
+  };
+}
+
+// ----- Start -----
+try { data = JSON.parse(recall('boardCache')); } catch (e) { data = null; }
+tick();
+fetchCalendar();
+nextPhoto();
+setInterval(fetchCalendar, CALENDAR_REFRESH_MIN * 60 * 1000);
+setInterval(nextPhoto, PHOTO_CHANGE_MIN * 60 * 1000);
+</script>
+</body>
+</html>
