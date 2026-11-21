@@ -6,6 +6,16 @@
 <title>Chasyn Management</title>
 <meta name="theme-color" content="#ece2d2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#19130e" media="(prefers-color-scheme: dark)">
+<script>
+  (function () {
+    var t = null; try { t = localStorage.getItem("chasyn-theme"); } catch (e) {}
+    if (t === "light" || t === "dark") {
+      document.documentElement.dataset.theme = t;
+      var c = t === "dark" ? "#19130e" : "#ece2d2";
+      document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.content = c; });
+    }
+  })();
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
@@ -28,20 +38,36 @@
   --accent-soft: #f0e2cd;
   --done: #a99885;
   --danger: #a3402b;
+  --urgent: #b3322a;
+  --urgent-bg: #f5dcd2;
   --display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
   --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
   color-scheme: light;
 }
+/* Dark theme: follows the device unless the switch picked one (data-theme on <html>) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #19130e; --sheet: #241b14; --ink: #f1e6d6; --muted: #a8957d;
     --line: #3a2d22; --accent: #d1a06c; --accent-soft: #3a2a1b; --done: #6f6050; --danger: #e08468;
+    --urgent: #f07b6b; --urgent-bg: #3b1d17;
     color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+    --bg: #19130e; --sheet: #241b14; --ink: #f1e6d6; --muted: #a8957d;
+    --line: #3a2d22; --accent: #d1a06c; --accent-soft: #3a2a1b; --done: #6f6050; --danger: #e08468;
+    --urgent: #f07b6b; --urgent-bg: #3b1d17;
+    color-scheme: dark;
+}
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* Logo: the wordmark's shape is used as a stencil, so it takes the theme's ink color */
+.brand-h { line-height: 0; }
+.brand { display: block; height: 34px; aspect-ratio: 900 / 113; max-width: 100%; background: var(--ink);
+  -webkit-mask: var(--logo) center / contain no-repeat; mask: var(--logo) center / contain no-repeat; }
+:root { --logo: url("data:image/png;base64,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"); }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
@@ -78,7 +104,11 @@ body {
 .mc-x svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .mail-item:hover .mc-x, .mc-x:focus-visible { opacity: 1; }
 .mc-x:hover { background: var(--accent-soft); color: var(--ink); }
-.mail-undo { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; font-size: 13px; color: var(--sheet); background: var(--ink); }
+.mail-undo { position: fixed; z-index: 50; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom)); width: min(420px, calc(100% - 24px)); box-sizing: border-box; border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.25); display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px 10px 16px; font-size: 13px; color: var(--sheet); background: var(--ink); }
+.mail-undo span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mail-undo button { flex: none; }
+.mail-item.leaving { overflow: hidden; opacity: 0; border-bottom-color: transparent; transition: height .22s ease, opacity .16s ease; pointer-events: none; }
+.mail-card, .mc-x { -webkit-tap-highlight-color: transparent; }
 .mail-undo button { font: 500 13px var(--body); color: var(--sheet); background: transparent; border: 1px solid currentColor; border-radius: 999px; padding: 4px 12px; cursor: pointer; }
 @media (hover: none) { .mc-x { opacity: .8; width: 40px; height: 40px; top: 6px; right: 4px; } }
 header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -86,6 +116,16 @@ h1 { font-family: var(--display); font-weight: 700; font-size: 32px; letter-spac
 .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
 .meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .count { font-family: var(--mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.meta-row { display: flex; align-items: center; gap: 12px; }
+/* Light/dark switch */
+.theme-switch { position: relative; flex: none; width: 52px; height: 28px; border-radius: 999px; border: 1px solid var(--line); background: var(--sheet); cursor: pointer; padding: 0; }
+.theme-switch:hover { border-color: var(--muted); }
+.theme-switch svg { position: absolute; top: 6px; width: 14px; height: 14px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.theme-switch .sun { left: 7px; }
+.theme-switch .moon { right: 7px; }
+.theme-switch .knob { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); transition: transform .18s ease; }
+.theme-switch[aria-checked="true"] .knob { transform: translateX(24px); }
+@media (prefers-reduced-motion: reduce) { .theme-switch .knob { transition: none; } }
 .count b { color: var(--ink); font-weight: 500; }
 .who { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .who img { width: 22px; height: 22px; border-radius: 50%; }
@@ -106,9 +146,23 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 ol { list-style: none; margin: 0; padding: 0; }
 .item { border-bottom: 1px solid var(--line); background: var(--sheet); position: relative; }
 .item:last-child { border-bottom: 0; }
-.row { display: grid; grid-template-columns: 28px 30px 26px minmax(0, 1fr) minmax(0, 33%) 36px; grid-template-areas: "h n c t note x"; align-items: start; gap: 6px; padding: 8px 8px 8px 6px; min-height: 52px; }
+.row { display: grid; grid-template-columns: 28px 46px 26px minmax(0, 1fr) minmax(0, 33%) 36px; grid-template-areas: "h n c t note x"; align-items: start; gap: 6px; padding: 8px 8px 8px 6px; min-height: 52px; }
 .row > .handle, .row > .grip-gap { grid-area: h; }
-.row > .num { grid-area: n; line-height: 36px; }
+.row > .num { grid-area: n; height: 36px; display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
+/* Urgent flag: a small native dropdown hidden over a flag icon */
+.prio { position: relative; width: 22px; height: 26px; display: grid; place-items: center; border-radius: 6px; color: var(--muted); opacity: .45; cursor: pointer; }
+.item:hover .prio, .prio:focus-within { opacity: 1; }
+.prio:hover { background: var(--bg); }
+.prio svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; stroke-linecap: round; }
+.prio select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
+.prio:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.item.urgent { background: var(--urgent-bg); box-shadow: inset 4px 0 0 var(--urgent); }
+.item.urgent .prio { color: var(--urgent); opacity: 1; }
+.item.urgent .prio svg { fill: currentColor; }
+.item.urgent .num { color: var(--urgent); font-weight: 600; }
+.item.urgent .check { border-color: var(--urgent); }
+body.readonly .prio { cursor: default; }
+body.readonly .item:not(.urgent) .prio { visibility: hidden; }
 .row > .check { grid-area: c; margin-top: 7px; }
 .row > .title { grid-area: t; }
 .row > .note-cell { grid-area: note; min-width: 0; padding-top: 1px; }
@@ -168,6 +222,76 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 @media (min-width: 701px) { .tabs button[data-tab="mail"] { display: none; } }
 body.tabbed[data-tab="music"] .grid { display: none; }
 body:not([data-tab="music"]) .music { display: none; }
+body.tabbed[data-tab="calendar"] .grid { display: none; }
+body:not([data-tab="calendar"]) .cal { display: none; }
+
+/* Calendar: month on the left half, time-ordered list on the right */
+.cal { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.cal-month { padding: 14px 14px 12px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 56px); }
+.cal-head { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.cal-head h2 { flex: 1; margin: 0; font: 700 20px var(--display); }
+.cal-nav { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); cursor: pointer; font: 500 18px/1 var(--body); }
+.cal-nav:hover { background: var(--bg); }
+.cal-dow, .cal-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-dow span { text-align: center; font: 500 10.5px var(--mono); letter-spacing: .08em; color: var(--muted); padding-bottom: 4px; }
+.cal-day { min-height: 92px; min-width: 0; border: 1px solid transparent; border-radius: 8px; background: var(--bg); color: var(--ink); cursor: pointer; padding: 5px 4px 4px; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 2px; font: 500 13px var(--body); font-variant-numeric: tabular-nums; text-align: left; overflow: hidden; }
+.cal-day .d { align-self: flex-start; margin: 0 0 2px 3px; line-height: 1.4; }
+.chip-ev { display: block; min-width: 0; font: 500 10.5px/1.35 var(--body); padding: 1px 4px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip-ev.c-chasyn { background: var(--accent); color: var(--sheet); }
+.chip-ev.c-life { background: var(--line); color: var(--ink); }
+.chip-ev.c-email { border: 1px solid var(--accent); color: var(--accent); padding: 0 3px; }
+.chip-more { font: 500 10px var(--mono); color: var(--muted); padding: 0 4px; }
+.cal-day.other { background: transparent; color: var(--muted); opacity: .55; }
+.cal-day:hover { border-color: var(--muted); }
+.cal-day.today .d { background: var(--ink); color: var(--sheet); border-radius: 999px; padding: 0 6px; margin-left: 0; }
+.cal-day.sel { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.cal-day.past:not(.other) { color: var(--muted); }
+.dots { display: flex; gap: 3px; height: 7px; align-items: center; }
+.dot { width: 6px; height: 6px; border-radius: 50%; }
+.dot.c-chasyn, .tag.c-chasyn { background: var(--accent); }
+.dot.c-life, .tag.c-life { background: var(--muted); }
+.dot.c-email { border: 1.5px solid var(--accent); width: 4px; height: 4px; }
+.cal-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; font: 11px var(--mono); color: var(--muted); }
+.cal-legend { gap: 6px; }
+.cal-legend .chip-ev { font-size: 10.5px; padding: 1px 6px; }
+.cal-list .section-label button { font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); background: none; border: 0; cursor: pointer; padding: 0; }
+.cal-acts { display: inline-flex; gap: 14px; align-items: center; }
+.cal-list .section-label .cal-add { color: var(--sheet); background: var(--accent); border-radius: 999px; padding: 4px 10px; letter-spacing: .04em; }
+.cal-list .section-label .cal-add:hover { filter: brightness(1.08); }
+.ev-form { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px 14px; border-bottom: 1px solid var(--line); background: var(--bg); }
+.ev-form input[type=text], .ev-form input[type=date], .ev-form input[type=time] { font: 15px var(--body); color: var(--ink); background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; box-sizing: border-box; -webkit-appearance: none; appearance: none; min-height: 38px; }
+.ev-form input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+#ev-title { font-weight: 600; font-size: 16px; }
+.ev-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ev-row #ev-date { flex: 1 1 150px; }
+.ev-row #ev-start, .ev-row #ev-end { flex: 1 1 0; }
+.ev-to { color: var(--muted); font-size: 13px; }
+.ev-check { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; color: var(--ink); cursor: pointer; white-space: nowrap; }
+.ev-check input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+.ev-bottom { justify-content: space-between; margin-top: 2px; }
+.ev-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--sheet); }
+.ev-seg input { position: absolute; opacity: 0; pointer-events: none; }
+.ev-seg span { display: block; font: 500 11px var(--mono); letter-spacing: .06em; padding: 6px 12px; color: var(--muted); cursor: pointer; }
+.ev-seg input:checked + span { background: var(--accent); color: var(--sheet); }
+.ev-seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ev-btns { display: inline-flex; gap: 8px; margin-left: auto; }
+.ev-btns button { font: 600 13px var(--body); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.ev-cancel { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.ev-save { background: var(--ink); color: var(--sheet); border: 1px solid var(--ink); }
+.ev-save:disabled { opacity: .6; cursor: default; }
+.ev-msg { font-size: 13px; color: var(--urgent); min-height: 0; }
+.ev-msg:empty { display: none; }
+.ev-note { padding: 8px 16px; font-size: 13px; color: var(--accent); border-bottom: 1px solid var(--line); }
+.ev-day { padding: 10px 16px 4px; font: 600 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-top: 1px solid var(--line); }
+.ev-day:first-child { border-top: 0; }
+.ev-day.is-today { color: var(--accent); }
+.ev { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 10px; padding: 8px 16px; color: var(--ink); text-decoration: none; }
+a.ev:hover { background: var(--bg); }
+.ev-time { font: 500 12.5px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 2px; }
+.ev-title { font-weight: 500; font-size: 14.5px; line-height: 1.4; overflow-wrap: anywhere; }
+.ev-sub { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 3px; font-size: 12.5px; color: var(--muted); }
+.tag { display: inline-block; font: 500 10px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--sheet); padding: 2px 6px; border-radius: 999px; }
+.tag.c-email { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
 
 /* Music: one block per song with a stage slider */
 .music { display: flex; flex-direction: column; gap: 16px; }
@@ -209,7 +333,7 @@ body:not([data-tab="music"]) .music { display: none; }
   .note-btn { display: grid; }
   .item.has-note .note-btn { display: none; }
   /* Empty note boxes stay hidden until the note button is tapped */
-  .item:not(.noting) .note-cell.empty { display: none; }
+  .item:not(.noting) .note-cell.no-note { display: none; }
 }
 @media (max-width: 700px) {
   body { padding-top: max(18px, env(safe-area-inset-top, 0px)); }
@@ -217,12 +341,18 @@ body:not([data-tab="music"]) .music { display: none; }
   .wrap { gap: 14px; }
   .eyebrow { display: none; }
   h1 { font-size: 24px; }
+  .brand { height: 22px; }
+  body.tabbed .count { display: none; }   /* the tabs already show the counts on phones */
+  header { flex-wrap: nowrap; }
+  .meta-row { gap: 8px; }
   header { align-items: center; }
   .meta { align-items: flex-end; gap: 2px; }
   .who img { display: none; }
-  .row { grid-template-columns: 30px 18px 30px minmax(0, 1fr) auto; grid-template-areas: "h n c t x" ". . . note note"; gap: 2px 6px; padding: 8px 6px 8px 2px; }
+  .row { grid-template-columns: 30px 40px 30px minmax(0, 1fr) auto; grid-template-areas: "h n c t x" ". . . note note"; gap: 2px 6px; padding: 8px 6px 8px 2px; }
   .handle { width: 30px; height: 40px; }
-  .num { line-height: 40px; font-size: 11px; }
+  .num { font-size: 11px; }
+  .row > .num { height: 40px; }
+  .prio { opacity: .7; width: 24px; height: 32px; }
   .row > .check { margin-top: 6px; }
   .check { width: 28px; height: 28px; border-radius: 8px; }
   .check svg { width: 16px; height: 16px; }
@@ -232,18 +362,27 @@ body:not([data-tab="music"]) .music { display: none; }
   .note { font-size: 14px; }
   .adder input { font-size: 16px; }   /* 16px stops iPhone zooming in on tap */
   .note, .title { -webkit-user-select: text; }
-  .section-label span:last-child { display: none; }
+  .section-label span:last-child:not(.cal-acts) { display: none; }
   .done-toggle span:last-child { display: inline; }
   /* To-Do / Emails tabs */
   .tabs button { flex: 1; padding: 10px 8px; }
   .tabs .badge { margin-left: 4px; }
   .tabs .wide-only { display: none; }
   .song-title { font-size: 17px; }
+  .cal { grid-template-columns: minmax(0, 1fr); }
+  .cal-month { position: static; padding: 12px 10px 10px; }
+  .cal-day { min-height: 66px; padding: 3px 2px 2px; font-size: 12px; border-radius: 6px; gap: 1px; }
+  .cal-day .d { margin: 0 0 1px 2px; }
+  .chip-ev { font-size: 9px; line-height: 1.3; padding: 0 2px; border-radius: 3px; }
+  .chip-ev.c-email { padding: 0 1px; }
+  .chip-more { font-size: 8.5px; padding: 0 2px; }
+  .cal-days, .cal-dow { gap: 3px; }
+  .ev { grid-template-columns: 64px minmax(0, 1fr); }
   body.tabbed[data-tab="mail"] .col { display: none; }
   body.tabbed[data-tab="todo"] .mail { display: none; }
   .mail-card { padding: 16px 14px; }
 }
-@media (prefers-reduced-motion: reduce) { .item.drag-anim, .note { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .item.drag-anim, .note, .mail-item.leaving { transition: none; } }
 </style>
 </head>
 <body class="readonly">
@@ -251,10 +390,17 @@ body:not([data-tab="music"]) .music { display: none; }
   <header>
     <div>
       <p class="eyebrow">Team dashboard</p>
-      <h1>Chasyn Management</h1>
+      <h1 class="brand-h"><span class="brand" role="img" aria-label="Chasyn"></span><span class="sr-only">Chasyn Management</span></h1>
     </div>
     <div class="meta">
-      <div class="count" id="count"><b>0</b> open · 0 done</div>
+      <div class="meta-row">
+        <div class="count" id="count"><b>0</b> open · 0 done</div>
+        <button class="theme-switch" id="theme-switch" type="button" role="switch" aria-checked="false" aria-label="Dark mode" title="Light / dark">
+          <svg class="sun" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg>
+          <svg class="moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 9.6A5.6 5.6 0 0 1 6.4 2.5a5.6 5.6 0 1 0 7.1 7.1z"/></svg>
+          <span class="knob"></span>
+        </button>
+      </div>
       <div class="who" id="who" hidden></div>
     </div>
   </header>
@@ -268,6 +414,7 @@ body:not([data-tab="music"]) .music { display: none; }
     <button type="button" data-tab="todo" class="on" aria-pressed="true">To-Do<span class="wide-only" id="tab-todo-and"> &amp; Emails</span><span class="badge" id="tab-todo-n"></span></button>
     <button type="button" data-tab="mail" aria-pressed="false">Emails<span class="badge" id="tab-mail-n"></span></button>
     <button type="button" data-tab="music" aria-pressed="false" hidden>Music<span class="badge" id="tab-music-n"></span></button>
+    <button type="button" data-tab="calendar" aria-pressed="false" hidden>Calendar<span class="badge" id="tab-cal-n"></span></button>
   </nav>
 
   <div class="grid" id="grid">
@@ -311,6 +458,44 @@ body:not([data-tab="music"]) .music { display: none; }
     <div class="mail-empty" id="songs-empty" hidden>No songs yet. Add the first one above.</div>
   </section>
 
+  <section class="cal" id="cal" aria-label="Calendar" hidden>
+    <div class="sheet cal-month">
+      <div class="cal-head">
+        <h2 id="cal-title"></h2>
+        <button class="cal-nav" id="cal-prev" type="button" aria-label="Previous month">‹</button>
+        <button class="cal-nav" id="cal-next" type="button" aria-label="Next month">›</button>
+      </div>
+      <div class="cal-dow" aria-hidden="true"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+      <div class="cal-days" id="cal-days"></div>
+      <div class="cal-legend"><span class="chip-ev c-chasyn">CHASYN</span><span class="chip-ev c-life">Life</span><span class="chip-ev c-email">From email</span></div>
+    </div>
+    <div class="sheet cal-list">
+      <div class="section-label"><span id="cal-list-title">Upcoming</span><span class="cal-acts"><button id="cal-all" type="button" hidden>Show upcoming</button><button id="cal-add" class="cal-add" type="button" hidden>+ Add event</button></span></div>
+      <form class="ev-form" id="ev-form" hidden novalidate>
+        <input id="ev-title" type="text" maxlength="200" placeholder="Event title" aria-label="Event title" autocomplete="off">
+        <div class="ev-row">
+          <input id="ev-date" type="date" aria-label="Date">
+          <label class="ev-check"><input id="ev-allday" type="checkbox"> All day</label>
+        </div>
+        <div class="ev-row" id="ev-times">
+          <input id="ev-start" type="time" aria-label="Start time" step="300"><span class="ev-to">to</span><input id="ev-end" type="time" aria-label="End time" step="300">
+        </div>
+        <input id="ev-loc" type="text" maxlength="200" placeholder="Location (optional)" aria-label="Location" autocomplete="off">
+        <div class="ev-row ev-bottom">
+          <div class="ev-seg" role="radiogroup" aria-label="Calendar">
+            <label><input type="radio" name="ev-cal" value="CHASYN" checked><span>CHASYN</span></label>
+            <label><input type="radio" name="ev-cal" value="Life"><span>Life</span></label>
+          </div>
+          <span class="ev-btns"><button type="button" class="ev-cancel" id="ev-cancel">Cancel</button><button type="submit" class="ev-save" id="ev-save">Add</button></span>
+        </div>
+        <div class="ev-msg" id="ev-msg" role="status"></div>
+      </form>
+      <div class="ev-note" id="ev-note" role="status" hidden></div>
+      <div id="cal-events"></div>
+      <div class="mail-empty" id="cal-empty" hidden></div>
+    </div>
+  </section>
+
   <div class="status" id="status">Loading the list…</div>
 </div>
 
@@ -323,10 +508,26 @@ body:not([data-tab="music"]) .music { display: none; }
 (function () {
   var GRIP = '<svg viewBox="0 0 12 18" aria-hidden="true"><circle cx="3" cy="3" r="1.5"/><circle cx="9" cy="3" r="1.5"/><circle cx="3" cy="9" r="1.5"/><circle cx="9" cy="9" r="1.5"/><circle cx="3" cy="15" r="1.5"/><circle cx="9" cy="15" r="1.5"/></svg>';
   var TICK = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 7.5l2.6 2.5L11 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var FLAG = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 13V1.8M3 2h7.5l-1.6 2.6L10.5 7.2H3"/></svg>';
   var NOTE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2.5h7l3 3v8H3z"/><path d="M5.5 8h5M5.5 10.5h3.5"/></svg>';
   var TRASH = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5"/></svg>';
 
   var $ = function (id) { return document.getElementById(id); };
+
+  // ---------- light / dark switch ----------
+  var darkMQ = window.matchMedia("(prefers-color-scheme: dark)");
+  function isDark() { var t = document.documentElement.dataset.theme; return t ? t === "dark" : darkMQ.matches; }
+  function paintSwitch() { $("theme-switch").setAttribute("aria-checked", isDark() ? "true" : "false"); }
+  $("theme-switch").addEventListener("click", function () {
+    var t = isDark() ? "light" : "dark";
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem("chasyn-theme", t); } catch (e) {}
+    var c = t === "dark" ? "#19130e" : "#ece2d2";
+    Array.prototype.forEach.call(document.querySelectorAll('meta[name="theme-color"]'), function (m) { m.content = c; });
+    paintSwitch();
+  });
+  if (darkMQ.addEventListener) darkMQ.addEventListener("change", paintSwitch);
+  paintSwitch();
   var openList = $("open-list"), doneList = $("done-list");
   var tasks = [], loaded = false, canEdit = false, user = null;
   var confirming = null, showDone = false, dragging = null, notingId = null;
@@ -346,17 +547,19 @@ body:not([data-tab="music"]) .music { display: none; }
   // ---------- render ----------
   function itemEl(t, idx, isDone) {
     var li = document.createElement("li");
-    li.className = "item" + (t.done ? " done" : "") + (t.notes ? " has-note" : "") + (notingId === t.id ? " noting" : "");
+    li.className = "item" + (t.done ? " done" : "") + (!t.done && t.priority === "urgent" ? " urgent" : "") + (t.notes ? " has-note" : "") + (notingId === t.id ? " noting" : "");
     li.dataset.id = t.id;
     var ro = canEdit ? "" : " readonly";
     var row = document.createElement("div");
     row.className = "row";
     row.innerHTML =
       (isDone ? '<span class="grip-gap"></span>' : '<button class="handle" type="button" aria-label="Reorder (drag, or use arrow keys)">' + GRIP + '</button>') +
-      '<span class="num">' + (isDone ? "" : pad(idx + 1)) + '</span>' +
+      '<span class="num">' + (isDone ? "" : pad(idx + 1) +
+        '<label class="prio" title="Priority">' + FLAG +
+        '<select aria-label="Priority"' + (canEdit ? "" : " disabled") + '><option value="">Normal</option><option value="urgent"' + (t.priority === "urgent" ? " selected" : "") + '>Urgent</option></select></label>') + '</span>' +
       '<button class="check" type="button" role="checkbox" aria-checked="' + (t.done ? "true" : "false") + '" aria-label="Mark complete"' + (canEdit ? "" : " disabled") + '>' + TICK + '</button>' +
       '<textarea class="title" rows="1" maxlength="300" aria-label="Task"' + ro + '></textarea>' +
-      ((canEdit || t.notes) ? '<div class="note-cell' + (t.notes ? '' : ' empty') + '"><textarea class="note" id="note-' + t.id + '" rows="1" placeholder="Add a note…" aria-label="Notes for task"' + ro + '></textarea></div>' : '') +
+      ((canEdit || t.notes) ? '<div class="note-cell' + (t.notes ? '' : ' no-note') + '"><textarea class="note" id="note-' + t.id + '" rows="1" placeholder="Add a note…" aria-label="Notes for task"' + ro + '></textarea></div>' : '') +
       '<div class="tools"></div>';
     row.querySelector(".title").value = t.title || "";
     if (row.querySelector(".note")) row.querySelector(".note").value = t.notes || "";
@@ -462,7 +665,7 @@ body:not([data-tab="music"]) .music { display: none; }
     var input = $("new-task"), v = input.value.trim();
     if (!v || !canEdit) return;
     var open = sorted().open;
-    var t = { title: v, done: false, order: open.length ? (open[open.length - 1].order || 0) + 1000 : 1000, notes: "", createdAt: Date.now() };
+    var t = { title: v, done: false, order: open.length ? (open[0].order || 0) - 1000 : 1000, notes: "", createdAt: Date.now() };   // new tasks go on top
     var ref = col.doc();
     tasks.push(Object.assign({ id: ref.id }, t)); render();
     ref.set(t).catch(denied);
@@ -544,6 +747,12 @@ body:not([data-tab="music"]) .music { display: none; }
       if (e.target.classList.contains("handle") && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
         e.preventDefault(); moveBy(e.target.closest(".item").dataset.id, e.key === "ArrowUp" ? -1 : 1);
       }
+    });
+    list.addEventListener("change", function (e) {
+      if (!e.target.closest(".prio")) return;
+      var li = e.target.closest(".item"), t = li && find(li.dataset.id); if (!t || !canEdit) return;
+      if (e.target.value === "urgent") write(t.id, { priority: "urgent" });
+      else { delete t.priority; render(); col.doc(t.id).update({ priority: firebase.firestore.FieldValue.delete() }).catch(denied); }
     });
     list.addEventListener("input", function (e) {
       if (e.target.classList.contains("note")) { grow(e.target); saveNote(e.target, false); }
@@ -629,7 +838,7 @@ body:not([data-tab="music"]) .music { display: none; }
   });
 
   // ---------- emails (team only; the rules hide them from everyone else) ----------
-  var mailTasks = null, mailMeta = null, mailUnsubs = [], mailHidden = {}, undoTimer = 0, lastHidden = null;
+  var mailNodes = {}, mailTasks = null, mailMeta = null, mailUnsubs = [], mailHidden = {}, undoTimer = 0, lastHidden = null;
   var XICON = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8"/></svg>';
   var wideMQ = window.matchMedia("(min-width: 701px)");
   function setTab(tab) {
@@ -640,23 +849,26 @@ body:not([data-tab="music"]) .music { display: none; }
       b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false");
     });
     try { localStorage.setItem("todo-tab", tab); } catch (e) {}
+    if (tab === "calendar" && typeof calRefresh === "function") calRefresh();
     growAll();
   }
   $("tabs").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) { setTab(b.dataset.tab); window.scrollTo(0, 0); } });
   (function () { var t = "todo"; try { t = localStorage.getItem("todo-tab") || "todo"; } catch (e) {} setTab(t); })();
 
-  var mailOK = false, musicOK = false;
+  var mailOK = false, musicOK = false, calOK = false;
   function updateTabs() {
-    var any = mailOK || musicOK;
+    var any = mailOK || musicOK || calOK;
     $("tabs").hidden = !any;
     document.body.classList.toggle("tabbed", any);
     document.querySelector('#tabs button[data-tab="mail"]').hidden = !mailOK;
     document.querySelector('#tabs button[data-tab="music"]').hidden = !musicOK;
     $("tab-todo-and").hidden = !mailOK;
     $("music").hidden = !musicOK;
+    document.querySelector('#tabs button[data-tab="calendar"]').hidden = !calOK;
+    $("cal").hidden = !calOK;
     var t = document.body.dataset.tab;
-    if ((t === "music" && !musicOK) || (t === "mail" && !mailOK)) setTab("todo");
-    document.querySelector(".wrap").classList.toggle("wide", mailOK || (musicOK && t === "music"));
+    if ((t === "music" && !musicOK) || (t === "mail" && !mailOK) || (t === "calendar" && !calOK)) setTab("todo");
+    document.querySelector(".wrap").classList.toggle("wide", mailOK || (musicOK && t === "music") || (calOK && t === "calendar"));
   }
   wideMQ.addEventListener && wideMQ.addEventListener("change", function () { setTab(document.body.dataset.tab || "todo"); });
   function showMail(on) {
@@ -687,8 +899,24 @@ body:not([data-tab="music"]) .music { display: none; }
       var r = ra - rb;
       return r || (b.lastDate || 0) - (a.lastDate || 0);
     });
-    list.innerHTML = "";
+    var keep = {}, cur = list.firstChild;
     items.forEach(function (m) {
+      var key = JSON.stringify([m.title, m.subject, m.status, m.summary, m.people, m.link, m.lastDate ? ago(m.lastDate) : ""]);
+      keep[m.id] = true;
+      var old = mailNodes[m.id], node = old && old.key === key ? old.el : buildMail(m);
+      if (old && old.el !== node) old.el.remove();
+      mailNodes[m.id] = { key: key, el: node };
+      while (cur && cur.classList.contains("leaving")) cur = cur.nextSibling;
+      if (cur === node) cur = cur.nextSibling; else list.insertBefore(node, cur);
+    });
+    Object.keys(mailNodes).forEach(function (id) {
+      if (keep[id]) return;
+      var el = mailNodes[id].el; delete mailNodes[id];
+      if (!el.classList.contains("leaving")) el.remove();
+    });
+    finishMail(items);
+  }
+  function buildMail(m) {
       var a = document.createElement("a");
       a.className = "mail-card";
       a.href = /^https:\/\/mail\.google\.com\//.test(m.link || "") ? m.link : "https://mail.google.com/";
@@ -709,15 +937,31 @@ body:not([data-tab="music"]) .music { display: none; }
       x.setAttribute("aria-label", "Hide this email"); x.title = "Hide (comes back if there's a new message)";
       x.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); hideMail(m); });
       wrap.appendChild(a); wrap.appendChild(x);
-      list.appendChild(wrap);
-    });
+      wrap.dataset.id = m.id;
+      return wrap;
+  }
+  function finishMail(items) {
+    var empty = $("mail-empty");
     empty.hidden = items.length > 0;
     var need = items.filter(function (m) { return m.status === "Needs reply"; }).length;
     $("tab-mail-n").textContent = need ? need : "";
+    if (typeof renderCal === "function") renderCal();
     empty.textContent = mailMeta ? "No active Chasyn email in the last two weeks." : "Email updates aren't connected yet. They'll appear here once the email sync is running.";
+  }
+  function collapseMail(id) {
+    var n = mailNodes[id]; if (!n) return;
+    var el = n.el; delete mailNodes[id];
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { el.remove(); return; }
+    el.style.height = el.offsetHeight + "px";
+    el.offsetHeight;   // lock the current height before animating to zero
+    el.classList.add("leaving"); el.style.height = "0px";
+    var done = function () { el.remove(); };
+    el.addEventListener("transitionend", function (e) { if (e.propertyName === "height") done(); });
+    setTimeout(done, 400);
   }
   function hideMail(m) {
     mailHidden[m.id] = { lastDate: m.lastDate || 0 };   // hide right away; the database confirms
+    collapseMail(m.id);
     renderMail();
     lastHidden = m;
     $("mail-undo-text").textContent = "Hidden: " + (m.title || "email");
@@ -753,6 +997,7 @@ body:not([data-tab="music"]) .music { display: none; }
   function stopMail() {
     mailUnsubs.forEach(function (u) { try { u(); } catch (e) {} });
     mailUnsubs = []; mailTasks = null; mailMeta = null; mailHidden = {}; showMail(false);
+    mailNodes = {}; $("mail-list").innerHTML = "";
   }
   setInterval(renderMail, 60000);
 
@@ -896,13 +1141,191 @@ body:not([data-tab="music"]) .music { display: none; }
     if (songsUnsub) { try { songsUnsub(); } catch (e) {} }
     songsUnsub = null; songs = null; musicOK = false; updateTabs();
   }
-  $("tabs").addEventListener("click", function () { setTimeout(function () { updateTabs(); if (document.body.dataset.tab === "music") renderSongs(); }, 0); });
+  $("tabs").addEventListener("click", function () { setTimeout(function () { updateTabs(); if (document.body.dataset.tab === "music") renderSongs(); if (document.body.dataset.tab === "calendar") renderCal(); }, 0); });
+
+  // ---------- calendar (team only): Google Calendar events + dates found in email ----------
+  var calEvents = null, calUnsub = null, calSel = null;
+  var narrowMQ = window.matchMedia("(max-width: 700px)");
+  if (narrowMQ.addEventListener) narrowMQ.addEventListener("change", function () { if (calOK) renderCal(); });
+  var calView = (function () { var d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; })();
+  var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  function ymd(d) { return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+  function parseYmd(s) { var p = String(s).split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function addDays(s, n) { var d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); }
+  function fmtTime(t) {
+    if (!t) return "All day";
+    var p = t.split(":"), h = +p[0], m = p[1] || "00";
+    return (h % 12 || 12) + ":" + m + (h < 12 ? " am" : " pm");
+  }
+  function fmtDay(s) {
+    var d = parseYmd(s), today = ymd(new Date()), tmr = addDays(today, 1);
+    var base = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    return s === today ? "Today · " + base : s === tmr ? "Tomorrow · " + base : base;
+  }
+  function allEvents() {
+    var out = [];
+    (calEvents || []).forEach(function (e) {
+      if (!e.date) return;
+      out.push({ id: e.id, title: e.title || "(No title)", date: e.date, endDate: e.endDate || e.date, time: e.allDay ? "" : (e.time || ""),
+        endTime: e.allDay ? "" : (e.endTime || ""), cal: e.calendar === "CHASYN" ? "chasyn" : "life", calName: e.calendar || "Life", location: e.location || "" });
+    });
+    (mailTasks || []).forEach(function (m) {
+      var h = mailHidden[m.id]; if (h && (m.lastDate || 0) <= (h.lastDate || 0)) return;
+      (m.events || []).forEach(function (ev, i) {
+        if (!ev || !/^\d{4}-\d{2}-\d{2}$/.test(ev.date || "")) return;
+        var dup = out.some(function (o) { return o.cal !== "email" && o.date === ev.date && (o.time || "") === (ev.time || "") && o.time; });
+        if (dup) return;
+        out.push({ id: "em_" + m.id + "_" + i, title: ev.title || m.title, date: ev.date, endDate: ev.date, time: /^\d{2}:\d{2}$/.test(ev.time || "") ? ev.time : "",
+          endTime: "", cal: "email", calName: "From email", location: m.title || "", link: m.link });
+      });
+    });
+    out.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : (a.time || "") < (b.time || "") ? -1 : (a.time || "") > (b.time || "") ? 1 : 0; });
+    return out;
+  }
+  function eventsOn(list, day) { return list.filter(function (e) { return e.date <= day && day <= (e.endDate || e.date); }); }
+  function renderCal() {
+    if (!calOK) return;
+    var list = allEvents(), today = ymd(new Date());
+    // month grid
+    $("cal-title").textContent = MONTHS[calView.m] + " " + calView.y;
+    var first = new Date(calView.y, calView.m, 1), start = new Date(first); start.setDate(1 - first.getDay());
+    var days = $("cal-days"); days.innerHTML = "";
+    for (var i = 0; i < 42; i++) {
+      var d = new Date(start); d.setDate(start.getDate() + i);
+      if (i >= 35 && d.getMonth() !== calView.m) break;
+      var key = ymd(d), evs = eventsOn(list, key);
+      var b = document.createElement("button");
+      b.type = "button"; b.dataset.day = key;
+      b.className = "cal-day" + (d.getMonth() !== calView.m ? " other" : "") + (key === today ? " today" : "") + (key === calSel ? " sel" : "") + (key < today ? " past" : "");
+      b.setAttribute("aria-label", d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) + (evs.length ? ", " + evs.length + " event" + (evs.length > 1 ? "s" : "") : ""));
+      var num = document.createElement("span"); num.className = "d"; num.textContent = d.getDate(); b.appendChild(num);
+      var maxChips = narrowMQ.matches ? 2 : 3, fit = evs.length > maxChips ? maxChips - 1 : evs.length;
+      evs.slice(0, fit).forEach(function (e) {
+        var c = document.createElement("span"); c.className = "chip-ev c-" + e.cal; c.textContent = e.title; c.title = (e.time ? fmtTime(e.time) + " " : "") + e.title; b.appendChild(c);
+      });
+      if (evs.length > fit) { var more = document.createElement("span"); more.className = "chip-more"; more.textContent = "+" + (evs.length - fit) + (narrowMQ.matches ? "" : " more"); b.appendChild(more); }
+      days.appendChild(b);
+    }
+    // list: the selected day, or everything from today on
+    var shown = calSel ? eventsOn(list, calSel) : list.filter(function (e) { return (e.endDate || e.date) >= today; });
+    $("cal-list-title").textContent = calSel ? fmtDay(calSel) : "Upcoming";
+    $("cal-all").hidden = !calSel;
+    var box = $("cal-events"); box.innerHTML = "";
+    var lastDay = null;
+    shown.forEach(function (e) {
+      var day = calSel || (e.date < today ? today : e.date);
+      if (!calSel && day !== lastDay) {
+        var h = document.createElement("div"); h.className = "ev-day" + (day === today ? " is-today" : ""); h.textContent = fmtDay(day); box.appendChild(h); lastDay = day;
+      }
+      var row = document.createElement(e.link ? "a" : "div");
+      row.className = "ev";
+      if (e.link) { row.href = /^https:\/\/mail\.google\.com\//.test(e.link) ? e.link : "https://mail.google.com/"; row.target = "_blank"; row.rel = "noopener"; row.title = "Open the email"; }
+      var tm = document.createElement("div"); tm.className = "ev-time"; tm.textContent = fmtTime(e.time); row.appendChild(tm);
+      var body = document.createElement("div");
+      var t = document.createElement("div"); t.className = "ev-title"; t.textContent = e.title; body.appendChild(t);
+      var sub = document.createElement("div"); sub.className = "ev-sub";
+      var tag = document.createElement("span"); tag.className = "tag c-" + e.cal; tag.textContent = e.calName; sub.appendChild(tag);
+      var extra = [];
+      if (e.endTime && e.time) extra.push("until " + fmtTime(e.endTime));
+      if (e.endDate && e.endDate !== e.date) extra.push("through " + parseYmd(e.endDate).toLocaleDateString(undefined, { month: "short", day: "numeric" }));
+      if (e.location) extra.push(e.location);
+      if (extra.length) { var x = document.createElement("span"); x.textContent = extra.join(" · "); sub.appendChild(x); }
+      body.appendChild(sub); row.appendChild(body);
+      box.appendChild(row);
+    });
+    $("cal-empty").hidden = shown.length > 0;
+    $("cal-empty").textContent = calSel ? "Nothing on this day." : (calEvents && calEvents.length ? "Nothing coming up." : "Calendar events will appear here once the calendar sync is running.");
+    var weekEnd = addDays(today, 7);
+    $("tab-cal-n").textContent = list.filter(function (e) { return e.date >= today && e.date < weekEnd; }).length || "";
+  }
+  $("cal-days").addEventListener("click", function (e) {
+    var b = e.target.closest(".cal-day"); if (!b) return;
+    calSel = calSel === b.dataset.day ? null : b.dataset.day;
+    var d = parseYmd(b.dataset.day);
+    if (d.getMonth() !== calView.m) { calView = { y: d.getFullYear(), m: d.getMonth() }; }
+    renderCal();
+  });
+  $("cal-prev").addEventListener("click", function () { calView.m--; if (calView.m < 0) { calView.m = 11; calView.y--; } renderCal(); });
+  $("cal-next").addEventListener("click", function () { calView.m++; if (calView.m > 11) { calView.m = 0; calView.y++; } renderCal(); });
+  $("cal-all").addEventListener("click", function () { calSel = null; var d = new Date(); calView = { y: d.getFullYear(), m: d.getMonth() }; renderCal(); });
+  // ---------- add events (sent to your Google Calendar by the email-sync script) ----------
+  var CAL_API = "https://script.google.com/macros/s/AKfycbxfEZI6ztDgQE2hdZ0zFbdBwNAOPXkW4QtY5haCTVbqtvfPfHX9IwuoKJQGfr7enqwKcg/exec";   // the script's web app address; the Add button stays hidden until it's set
+  var noteTimer = 0, lastRefresh = 0;
+  function calPost(body) {
+    return user.getIdToken().then(function (tok) {
+      body.idToken = tok;
+      return fetch(CAL_API, { method: "POST", body: JSON.stringify(body) });   // plain text body: no CORS preflight
+    }).then(function (r) { return r.json(); });
+  }
+  function calRefresh() {   // pull fresh events from Google when the Calendar tab opens
+    if (!CAL_API || !user || !calOK || Date.now() - lastRefresh < 60000) return;
+    lastRefresh = Date.now();
+    calPost({ action: "refresh" }).catch(function () {});
+  }
+  function hhmm(mins) { mins = ((mins % 1440) + 1440) % 1440; return String(Math.floor(mins / 60)).padStart(2, "0") + ":" + String(mins % 60).padStart(2, "0"); }
+  function toMins(t) { var p = (t || "").split(":"); return +p[0] * 60 + +p[1]; }
+  function setAllDay() { $("ev-times").hidden = $("ev-allday").checked; }
+  function openEvForm() {
+    var f = $("ev-form"), now = new Date(), start = (now.getHours() + 1) * 60;
+    f.reset(); $("ev-msg").textContent = "";
+    $("ev-date").value = calSel || ymd(now);
+    $("ev-start").value = hhmm(start); $("ev-end").value = hhmm(start + 60);
+    setAllDay();
+    f.hidden = false; $("cal-add").hidden = true; $("ev-note").hidden = true;
+    $("ev-title").focus();
+  }
+  function closeEvForm() { $("ev-form").hidden = true; $("cal-add").hidden = !CAL_API; }
+  $("cal-add").addEventListener("click", openEvForm);
+  $("ev-cancel").addEventListener("click", closeEvForm);
+  $("ev-allday").addEventListener("change", setAllDay);
+  $("ev-form").addEventListener("input", function () { $("ev-msg").textContent = ""; });
+  $("ev-start").addEventListener("change", function () {   // keep the end after the start
+    if ($("ev-start").value && toMins($("ev-end").value) <= toMins($("ev-start").value)) $("ev-end").value = hhmm(toMins($("ev-start").value) + 60);
+  });
+  $("ev-form").addEventListener("keydown", function (e) { if (e.key === "Escape") closeEvForm(); });
+  $("ev-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var msg = $("ev-msg"), save = $("ev-save");
+    var ev = {
+      title: $("ev-title").value.trim(), date: $("ev-date").value, allDay: $("ev-allday").checked,
+      time: $("ev-start").value, endTime: $("ev-end").value, location: $("ev-loc").value.trim(),
+      calendar: document.querySelector('input[name="ev-cal"]:checked').value
+    };
+    if (!ev.title) { msg.textContent = "Add a title."; $("ev-title").focus(); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ev.date)) { msg.textContent = "Pick a date."; return; }
+    if (!ev.allDay && !ev.time) { msg.textContent = "Pick a start time, or check All day."; return; }
+    msg.textContent = ""; save.disabled = true; save.textContent = "Adding…";
+    calPost({ action: "add", event: ev }).then(function (r) {
+      if (!r || !r.ok) throw new Error(r && r.error || "Couldn't add it.");
+      closeEvForm();
+      calSel = ev.date; var d = parseYmd(ev.date); calView = { y: d.getFullYear(), m: d.getMonth() }; renderCal();
+      var note = $("ev-note"); note.textContent = "Added “" + ev.title + "” to your " + ev.calendar + " Google Calendar."; note.hidden = false;
+      clearTimeout(noteTimer); noteTimer = setTimeout(function () { note.hidden = true; }, 6000);
+    }).catch(function (err) {
+      msg.textContent = (err && err.message && !/Failed to fetch|NetworkError|Load failed/.test(err.message)) ? err.message : "Couldn't reach Google Calendar. Check your connection and try again.";
+    }).then(function () { save.disabled = false; save.textContent = "Add"; });
+  });
+  function startCal() {
+    stopCal();
+    calUnsub = col.firestore.collection("events").onSnapshot(function (snap) {
+      calEvents = snap.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); });
+      var first = !calOK;
+      calOK = true; updateTabs(); renderCal();
+      if (first) { if ($("ev-form").hidden) $("cal-add").hidden = !CAL_API; if (document.body.dataset.tab === "calendar") calRefresh(); }
+    }, function () { stopCal(); });   // not on the team list: no Calendar tab
+  }
+  function stopCal() {
+    if (calUnsub) { try { calUnsub(); } catch (e) {} }
+    calUnsub = null; calEvents = null; calOK = false; updateTabs();
+    $("cal-add").hidden = true; $("ev-form").hidden = true;
+  }
+  setInterval(function () { if (calOK) renderCal(); }, 5 * 60 * 1000);
 
   auth.onAuthStateChanged(function (u) {
     user = u;
     canEdit = !!u;   // the database rules have the final say; a refused write shows a message
     setEditMode();
-    if (u) { startMail(); startMusic(); } else { stopMail(); stopMusic(); }
+    if (u) { startMail(); startMusic(); startCal(); } else { stopMail(); stopMusic(); stopCal(); }
   });
 })();
 </script>
