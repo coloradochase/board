@@ -14,8 +14,9 @@ var PROJECT_ID = 'chasyn-board';
 var LOOKBACK_DAYS = 14;
 var MAX_THREADS = 40;
 var HIDE_LABEL = 'hide-from-board';
-var BATCH = 8;
-var MODELS = ['gemini-flash-latest', 'gemini-2.5-flash'];
+var BATCH = 5;
+var TIME_BUDGET_MS = 4.5 * 60 * 1000;   // Apps Script stops runs at 6 minutes; save and stop before that
+var MODELS = ['gemini-3.5-flash-lite', 'gemini-flash-lite-latest'];   // fast, cheap models; first one that exists is used
 var TEAM = 'Becca Haddad (manager, beccahaddadmgmt@gmail.com), Sam (sam@consigmgmt.com), Carson Becker (carson@carsonbecker.com)';
 
 var FS = 'https://firestore.googleapis.com/v1/projects/' + PROJECT_ID + '/databases/(default)/documents';
@@ -28,6 +29,13 @@ function setup() {
 }
 
 function syncEmails() {
+  var started = Date.now();
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) { Logger.log('Another sync is still running; skipping.'); return; }
+  try { runSync(started); } finally { lock.releaseLock(); }
+}
+
+function runSync(started) {
   var props = PropertiesService.getScriptProperties();
   var key = props.getProperty('GEMINI_API_KEY');
   if (!key) throw new Error('Add GEMINI_API_KEY under Project Settings > Script Properties.');
@@ -39,15 +47,22 @@ function syncEmails() {
   var q = 'category:primary newer_than:' + LOOKBACK_DAYS + 'd -in:chats -label:' + HIDE_LABEL;
   var list = Gmail.Users.Threads.list('me', { q: q, maxResults: MAX_THREADS }).threads || [];
 
-  var next = {}, toAsk = [];
+  var next = {}, todo = [];
   list.forEach(function (t) {
-    if (seen[t.id] && seen[t.id].h === t.historyId) { next[t.id] = seen[t.id]; return; }
-    toAsk.push(describe(t.id, t.historyId, me));
+    if (seen[t.id] && seen[t.id].h === t.historyId) next[t.id] = seen[t.id];
+    else todo.push(t);
   });
+  Logger.log(list.length + ' threads, ' + todo.length + ' new or changed');
 
-  for (var i = 0; i < toAsk.length; i += BATCH) {
-    var batch = toAsk.slice(i, i + BATCH);
-    var results = askGemini(key, batch, me);
+  var finished = true;
+  for (var i = 0; i < todo.length; i += BATCH) {
+    if (Date.now() - started > TIME_BUDGET_MS) { finished = false; break; }
+    var batch = todo.slice(i, i + BATCH).map(function (t) { return describe(t.id, t.historyId, me); });
+    var t0 = Date.now();
+    var results;
+    try { results = askGemini(key, batch, me); }
+    catch (e) { Logger.log('Gemini unavailable, will retry next run: ' + e.message.slice(0, 200)); finished = false; break; }
+    Logger.log('Gemini batch of ' + batch.length + ' took ' + Math.round((Date.now() - t0) / 1000) + 's');
     batch.forEach(function (b) {
       var r = results.filter(function (x) { return x.id === b.id; })[0];
       var relevant = !!(r && r.relevant && r.title);
@@ -64,6 +79,17 @@ function syncEmails() {
         });
       }
     });
+    // Save progress after every batch so a stopped run never redoes finished work.
+    var progress = {};
+    Object.keys(seen).forEach(function (id) { progress[id] = seen[id]; });
+    Object.keys(next).forEach(function (id) { progress[id] = next[id]; });
+    props.setProperty('SEEN', JSON.stringify(progress));
+  }
+
+  if (!finished) {
+    Logger.log('Out of time; the next run continues where this one stopped.');
+    writeDoc('emailsMeta/status', { lastRun: Date.now(), count: -1 });
+    return;
   }
 
   // Remove cards for threads that aged out, were hidden, or stopped being business.
@@ -73,6 +99,15 @@ function syncEmails() {
 
   writeDoc('emailsMeta/status', { lastRun: Date.now(), count: Object.keys(keep).length });
   props.setProperty('SEEN', JSON.stringify(next));
+  Logger.log('Done: ' + Object.keys(keep).length + ' Chasyn threads on the board');
+}
+
+// Quick check that the Gemini key works (run from the editor).
+function testGemini() {
+  var key = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  var t0 = Date.now();
+  var r = askGemini(key, [{ id: 'test', subject: 'Booking inquiry', messages: [{ from: 'Promoter <p@example.com>', date: new Date().toISOString(), text: 'Hi Chasyn, are you free to play our venue on March 3? Fee is $1,500.' }] }], 'me@example.com');
+  Logger.log(JSON.stringify(r) + ' in ' + Math.round((Date.now() - t0) / 1000) + 's');
 }
 
 // ---------- Gmail ----------
@@ -123,7 +158,13 @@ function bodyText(p) {
   }
   return '';
 }
-function decode(d) { return Utilities.newBlob(Utilities.base64DecodeWebSafe(d)).getDataAsString(); }
+function decode(d) {
+  try {
+    d = String(d).replace(/-/g, '+').replace(/_/g, '/').replace(/[^A-Za-z0-9+/]/g, '');
+    while (d.length % 4) d += '=';
+    return Utilities.newBlob(Utilities.base64Decode(d)).getDataAsString('UTF-8');
+  } catch (e) { return ''; }
+}
 
 function stripQuoted(s) {
   s = s.split(/\n(?:On .{5,200}wrote:|-{2,}\s*Original Message|From: .+\r?\nSent: )/)[0];
@@ -153,6 +194,7 @@ function askGemini(key, batch, me) {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0.2,
+      thinkingConfig: { thinkingLevel: 'minimal' },   // short summaries don't need slow "thinking"
       responseMimeType: 'application/json',
       responseSchema: {
         type: 'ARRAY',
@@ -171,12 +213,21 @@ function askGemini(key, batch, me) {
 
   var lastErr = '';
   for (var i = 0; i < MODELS.length; i++) {
-    var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + MODELS[i] + ':generateContent', {
-      method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-      headers: { 'x-goog-api-key': key }, payload: JSON.stringify(body)
-    });
-    var code = res.getResponseCode();
+    var res, code;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + MODELS[i] + ':generateContent', {
+        method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+        headers: { 'x-goog-api-key': key }, payload: JSON.stringify(body)
+      });
+      code = res.getResponseCode();
+      if (code !== 429 && code < 500) break;
+      Utilities.sleep(4000);   // busy or rate-limited: wait and try once more
+    }
+    if (code === 429 || code >= 500) { lastErr = MODELS[i] + ' busy (' + code + ')'; continue; }   // try the backup model
     if (code === 404) { lastErr = MODELS[i] + ' not found'; continue; }
+    if (code === 400 && /thinking/i.test(res.getContentText()) && body.generationConfig.thinkingConfig) {
+      delete body.generationConfig.thinkingConfig; i--; continue;   // model doesn't accept that setting; retry without it
+    }
     if (code >= 300) throw new Error('Gemini ' + code + ': ' + res.getContentText().slice(0, 300));
     var json = JSON.parse(res.getContentText());
     var text = json.candidates && json.candidates[0] && json.candidates[0].content.parts[0].text;
