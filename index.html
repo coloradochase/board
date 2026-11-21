@@ -47,6 +47,26 @@
   .empty { font-size: 1.6vw; font-weight: 300; opacity: .8; }
   .more { font-size: 1.1vw; opacity: .6; }
   .status { position: fixed; right: 4.5vw; bottom: 2vh; font-size: .9vw; opacity: .5; }
+
+  [hidden] { display: none !important; }
+  /* To-do panel: under the clock, same glass as the calendar panel */
+  .right { display: flex; flex-direction: column; align-items: flex-end; max-height: 88vh; }
+  .todo { width: 33vw; margin-top: 4.5vh; background: rgba(0,0,0,.38); border-radius: 1.4vw;
+    padding: 2vw 2.4vw 1.2vw; box-sizing: border-box; overflow: hidden; min-height: 0; flex: 0 1 auto; }
+  .todo.fade { -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 70%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 0%, #000 70%, transparent 100%); }
+  .todo-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.2vw; }
+  .todo-head .day { margin: 0; }
+  .todo-count { font-size: 1.1vw; opacity: .6; }
+  .task { display: flex; gap: 1vw; align-items: flex-start; margin-bottom: 1vw; }
+  .task .box { flex: none; width: 1.25vw; height: 1.25vw; margin-top: .35vw; border: .14vw solid rgba(255,255,255,.75);
+    border-radius: .3vw; box-sizing: border-box; }
+  .task .t { font-size: 1.6vw; font-weight: 400; line-height: 1.25; }
+  .task .n { font-size: 1.1vw; opacity: .6; margin-top: .15vw; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; max-width: 25vw; }
+  .task.just-done { opacity: .45; }
+  .task.just-done .t { text-decoration: line-through; }
+  .task.just-done .box { background: rgba(255,255,255,.85); }
 </style>
 </head>
 <body>
@@ -55,9 +75,15 @@
 <div class="shade"></div>
 
 <div class="wrap">
-  <div class="time">
-    <div class="clock" id="clock"></div>
-    <div class="date" id="date"></div>
+  <div class="right">
+    <div class="time">
+      <div class="clock" id="clock"></div>
+      <div class="date" id="date"></div>
+    </div>
+    <div class="todo" id="todo" hidden>
+      <div class="todo-head"><div class="day">To-Do</div><div class="todo-count" id="todo-count"></div></div>
+      <div id="tasks"></div>
+    </div>
   </div>
   <div class="panel" id="panel">
     <div id="events"></div>
@@ -65,6 +91,9 @@
 </div>
 <div class="status" id="status"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script>
 // ===== Settings =====
 // Paste your Apps Script web app URL (ends in /exec) here.
@@ -94,26 +123,10 @@ function getToken() {
 var TOKEN = getToken();
 
 function pad(n) { return (n < 10 ? '0' : '') + n; }
-// All dates and times use your home time zone, no matter what the TV is set to.
-var TIME_ZONE = 'America/Denver';
-var tzFmt = null;
-try {
-  tzFmt = new Intl.DateTimeFormat('en-US', { timeZone: TIME_ZONE, year: 'numeric', month: 'numeric',
-    day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false, weekday: 'short' });
-} catch (e) {}
-var WD = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-function P(d) {
-  if (!tzFmt || !tzFmt.formatToParts) {
-    return { y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate(), h: d.getHours(), min: d.getMinutes(), dow: d.getDay() };
-  }
-  var o = {};
-  tzFmt.formatToParts(d).forEach(function (p) { o[p.type] = p.value; });
-  return { y: +o.year, m: +o.month, d: +o.day, h: (+o.hour) % 24, min: +o.minute, dow: WD.indexOf(o.weekday) };
-}
-function ymd(d) { var p = P(d); return p.y + '-' + pad(p.m) + '-' + pad(p.d); }
+function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
 function fmtTime(d) {
-  var p = P(d), h = p.h % 12 || 12;
-  return h + ':' + pad(p.min) + ' ' + (p.h < 12 ? 'AM' : 'PM');
+  var h = d.getHours() % 12 || 12;
+  return h + ':' + pad(d.getMinutes()) + ' ' + (d.getHours() < 12 ? 'AM' : 'PM');
 }
 function esc(s) {
   return String(s).replace(/[&<>"]/g, function (c) {
@@ -129,14 +142,13 @@ var lastMinute = -1, lastDay = '';
 
 function tick() {
   var now = new Date();
-  var np = P(now);
-  if (np.min !== lastMinute) {
-    lastMinute = np.min;
-    var h = np.h % 12 || 12;
+  if (now.getMinutes() !== lastMinute) {
+    lastMinute = now.getMinutes();
+    var h = now.getHours() % 12 || 12;
     document.getElementById('clock').innerHTML =
-      h + ':' + pad(np.min) + '<span class="ampm">' + (np.h < 12 ? 'AM' : 'PM') + '</span>';
+      h + ':' + pad(now.getMinutes()) + '<span class="ampm">' + (now.getHours() < 12 ? 'AM' : 'PM') + '</span>';
     document.getElementById('date').textContent =
-      DAYS[np.dow] + ', ' + MONTHS[np.m - 1] + ' ' + np.d;
+      DAYS[now.getDay()] + ', ' + MONTHS[now.getMonth()] + ' ' + now.getDate();
 
     var today = ymd(now);
     if (lastDay && today !== lastDay) fetchCalendar();   // new day: get the new day's events
@@ -145,7 +157,7 @@ function tick() {
     render();
     updateStatus();
 
-    if (np.h === NIGHTLY_RELOAD_HOUR && np.min === 0 &&
+    if (now.getHours() === NIGHTLY_RELOAD_HOUR && now.getMinutes() === 0 &&
         Date.now() - loadedAt > 60 * 60 * 1000) {
       location.reload();
     }
@@ -182,12 +194,11 @@ function dayKeyOf(ev, today) {
 }
 function dayLabel(k, today) {
   if (k === today) return 'Today';
-  var p = today.split('-');
-  var t = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + 1));
-  if (k === t.getUTCFullYear() + '-' + pad(t.getUTCMonth() + 1) + '-' + pad(t.getUTCDate())) return 'Tomorrow';
-  var q = k.split('-');
-  var d = new Date(Date.UTC(+q[0], +q[1] - 1, +q[2]));
-  return DAYS[d.getUTCDay()] + ', ' + MONTHS_SHORT[d.getUTCMonth()] + ' ' + d.getUTCDate();
+  var t = new Date(); t.setDate(t.getDate() + 1);
+  if (k === ymd(t)) return 'Tomorrow';
+  var p = k.split('-');
+  var d = new Date(+p[0], +p[1] - 1, +p[2]);
+  return DAYS[d.getDay()] + ', ' + MONTHS_SHORT[d.getMonth()] + ' ' + d.getDate();
 }
 
 function render() {
@@ -206,6 +217,7 @@ function render() {
     return;
   }
 
+  var startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   // Drop all-day events that already ended, tag each with its display day, sort.
   var evs = (data.events || []).filter(function (ev) {
@@ -237,7 +249,7 @@ function render() {
       var s = new Date(ev.start), e = new Date(ev.end);
       if (e <= now) cls += ' past';
       else if (s <= now) { cls += ' now'; tag = '<span class="tag">NOW</span>'; }
-      when = ymd(s) < today ? 'Until ' + fmtTime(e) : fmtTime(s) + ' – ' + fmtTime(e);
+      when = s < startOfDay ? 'Until ' + fmtTime(e) : fmtTime(s) + ' – ' + fmtTime(e);
     }
     html += '<div class="' + cls + '">' +
       '<div class="bar" style="background:' + esc(ev.color || '#fff') + '"></div>' +
@@ -306,7 +318,64 @@ function demoData() {
   };
 }
 
+// ----- To-do list (live from Firebase, read-only on the TV) -----
+var MAX_TASKS = 12;          // anything past what fits fades out at the bottom
+var DONE_LINGER_MIN = 10;    // a task checked off shows struck through this long, then leaves
+var todoTasks = null;
+
+function renderTodo() {
+  var panel = document.getElementById('todo');
+  if (!todoTasks) return;
+  var now = Date.now();
+  var open = todoTasks.filter(function (t) { return !t.done; })
+    .sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
+  var recent = todoTasks.filter(function (t) { return t.done && t.doneAt && now - t.doneAt < DONE_LINGER_MIN * 60000; });
+  document.getElementById('todo-count').textContent = open.length + ' open';
+  var list = open.slice(0, MAX_TASKS).concat(recent);
+  var html = '';
+  if (!list.length) html = '<div class="none">All clear</div>';
+  list.forEach(function (t) {
+    var firstNote = String(t.notes || '').split('\n')[0].trim();
+    html += '<div class="task' + (t.done ? ' just-done' : '') + '"><div class="box"></div><div>' +
+      '<div class="t">' + esc(t.title || '') + '</div>' +
+      (firstNote ? '<div class="n">' + esc(firstNote) + '</div>' : '') + '</div></div>';
+  });
+  document.getElementById('tasks').innerHTML = html;
+  panel.hidden = false;
+  panel.className = 'todo';
+  if (panel.scrollHeight > panel.clientHeight + 2) panel.className = 'todo fade';
+}
+
+function demoTodo() {
+  return [
+    { title: 'Edit Alexa Capelli video', order: 0, notes: '' },
+    { title: 'Chat about MC4D', order: 1, notes: 'Ask if I can play more dates' },
+    { title: 'Make Gone post', order: 2, notes: '' },
+    { title: 'Prepare for AGT video call on Friday', order: 3, notes: '' }
+  ];
+}
+
+function startTodo() {
+  if (DEMO) { todoTasks = demoTodo(); renderTodo(); return; }
+  var cfg = window.FIREBASE_CONFIG;
+  if (!window.firebase || !cfg || /PASTE/.test(cfg.apiKey || '')) return;   // not set up yet: panel stays hidden
+  try {
+    firebase.initializeApp(cfg);
+    var db = firebase.firestore();
+    try { db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
+    db.collection('tasks').onSnapshot(function (snap) {
+      todoTasks = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; });
+      store('todoCache', JSON.stringify(todoTasks));
+      renderTodo();
+    }, function () { /* keep showing the last copy; the 3 AM reload reconnects */ });
+  } catch (e) {}
+}
+
 // ----- Start -----
+try { todoTasks = JSON.parse(recall('todoCache')); } catch (e) { todoTasks = null; }
+renderTodo();
+startTodo();
+setInterval(renderTodo, 60 * 1000);   // lets checked-off tasks age out
 try { data = JSON.parse(recall('boardCache')); } catch (e) { data = null; }
 tick();
 fetchCalendar();
