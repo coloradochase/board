@@ -123,10 +123,29 @@ function getToken() {
 var TOKEN = getToken();
 
 function pad(n) { return (n < 10 ? '0' : '') + n; }
-function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+// All dates and times use your home time zone, no matter what the TV is set to.
+// Denver time is worked out here directly (MST, or MDT during daylight saving),
+// so it doesn't depend on the TV's time zone setting or the browser.
+function denverOffsetHours(d) {
+  var y = d.getUTCFullYear();
+  function nthSunday(month, n) {
+    var first = new Date(Date.UTC(y, month, 1)).getUTCDay();
+    return 1 + (7 - first) % 7 + (n - 1) * 7;
+  }
+  var dstStart = Date.UTC(y, 2, nthSunday(2, 2), 9);   // 2nd Sunday of March, 2 AM MST
+  var dstEnd = Date.UTC(y, 10, nthSunday(10, 1), 8);   // 1st Sunday of November, 2 AM MDT
+  var t = d.getTime();
+  return (t >= dstStart && t < dstEnd) ? -6 : -7;
+}
+function P(d) {
+  var s = new Date(d.getTime() + denverOffsetHours(d) * 3600000);
+  return { y: s.getUTCFullYear(), m: s.getUTCMonth() + 1, d: s.getUTCDate(),
+           h: s.getUTCHours(), min: s.getUTCMinutes(), dow: s.getUTCDay() };
+}
+function ymd(d) { var p = P(d); return p.y + '-' + pad(p.m) + '-' + pad(p.d); }
 function fmtTime(d) {
-  var h = d.getHours() % 12 || 12;
-  return h + ':' + pad(d.getMinutes()) + ' ' + (d.getHours() < 12 ? 'AM' : 'PM');
+  var p = P(d), h = p.h % 12 || 12;
+  return h + ':' + pad(p.min) + ' ' + (p.h < 12 ? 'AM' : 'PM');
 }
 function esc(s) {
   return String(s).replace(/[&<>"]/g, function (c) {
@@ -142,13 +161,14 @@ var lastMinute = -1, lastDay = '';
 
 function tick() {
   var now = new Date();
-  if (now.getMinutes() !== lastMinute) {
-    lastMinute = now.getMinutes();
-    var h = now.getHours() % 12 || 12;
+  var np = P(now);
+  if (np.min !== lastMinute) {
+    lastMinute = np.min;
+    var h = np.h % 12 || 12;
     document.getElementById('clock').innerHTML =
-      h + ':' + pad(now.getMinutes()) + '<span class="ampm">' + (now.getHours() < 12 ? 'AM' : 'PM') + '</span>';
+      h + ':' + pad(np.min) + '<span class="ampm">' + (np.h < 12 ? 'AM' : 'PM') + '</span>';
     document.getElementById('date').textContent =
-      DAYS[now.getDay()] + ', ' + MONTHS[now.getMonth()] + ' ' + now.getDate();
+      DAYS[np.dow] + ', ' + MONTHS[np.m - 1] + ' ' + np.d;
 
     var today = ymd(now);
     if (lastDay && today !== lastDay) fetchCalendar();   // new day: get the new day's events
@@ -157,7 +177,7 @@ function tick() {
     render();
     updateStatus();
 
-    if (now.getHours() === NIGHTLY_RELOAD_HOUR && now.getMinutes() === 0 &&
+    if (np.h === NIGHTLY_RELOAD_HOUR && np.min === 0 &&
         Date.now() - loadedAt > 60 * 60 * 1000) {
       location.reload();
     }
@@ -194,11 +214,12 @@ function dayKeyOf(ev, today) {
 }
 function dayLabel(k, today) {
   if (k === today) return 'Today';
-  var t = new Date(); t.setDate(t.getDate() + 1);
-  if (k === ymd(t)) return 'Tomorrow';
-  var p = k.split('-');
-  var d = new Date(+p[0], +p[1] - 1, +p[2]);
-  return DAYS[d.getDay()] + ', ' + MONTHS_SHORT[d.getMonth()] + ' ' + d.getDate();
+  var p = today.split('-');
+  var t = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + 1));
+  if (k === t.getUTCFullYear() + '-' + pad(t.getUTCMonth() + 1) + '-' + pad(t.getUTCDate())) return 'Tomorrow';
+  var q = k.split('-');
+  var d = new Date(Date.UTC(+q[0], +q[1] - 1, +q[2]));
+  return DAYS[d.getUTCDay()] + ', ' + MONTHS_SHORT[d.getUTCMonth()] + ' ' + d.getUTCDate();
 }
 
 function render() {
@@ -217,7 +238,6 @@ function render() {
     return;
   }
 
-  var startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   // Drop all-day events that already ended, tag each with its display day, sort.
   var evs = (data.events || []).filter(function (ev) {
@@ -249,7 +269,7 @@ function render() {
       var s = new Date(ev.start), e = new Date(ev.end);
       if (e <= now) cls += ' past';
       else if (s <= now) { cls += ' now'; tag = '<span class="tag">NOW</span>'; }
-      when = s < startOfDay ? 'Until ' + fmtTime(e) : fmtTime(s) + ' – ' + fmtTime(e);
+      when = ymd(s) < today ? 'Until ' + fmtTime(e) : fmtTime(s) + ' – ' + fmtTime(e);
     }
     html += '<div class="' + cls + '">' +
       '<div class="bar" style="background:' + esc(ev.color || '#fff') + '"></div>' +
