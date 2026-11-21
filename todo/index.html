@@ -186,21 +186,12 @@ body.readonly .item:not(.urgent) .prio { visibility: hidden; }
 .assign:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
 body.readonly .assign { cursor: default; }
 body.readonly .assign:not(.set), .item.done .assign:not(.set) { visibility: hidden; }
-/* List / Team switch and the Team view's side-by-side lists */
-.todo-acts { display: inline-flex; gap: 12px; align-items: center; }
-.view-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
-.view-seg button { font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
-.view-seg button[aria-pressed="true"] { background: var(--accent); color: var(--sheet); }
-.team { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px; padding: 12px; background: var(--bg); align-items: start; }
-.team-col { background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; min-width: 0; overflow: hidden; }
-.team-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); border-bottom: 1px solid var(--line); }
-.team-head .n { color: var(--muted); font-weight: 500; }
-.team-col.nobody .team-head { color: var(--muted); }
-.team .row { grid-template-columns: 44px 26px minmax(0, 1fr) auto auto; grid-template-areas: "n c t a x" ". . note note note"; padding: 6px 6px 6px 2px; min-height: 0; gap: 2px 6px; }
-.team .handle { display: none; }
-.team .note-btn { display: grid; }
-.team .item.has-note .note-btn { display: none; }
-.team .item:not(.noting) .note-cell.no-note { display: none; }
+/* One list per person, under the unassigned list */
+.people { display: flex; flex-direction: column; gap: 20px; }
+.people:empty { display: none; }
+.person-sheet .section-label { color: var(--ink); font-weight: 600; }
+.person-sheet .section-label .n { color: var(--muted); font-weight: 400; }
+.none-left { padding: 14px 16px; color: var(--muted); font-size: 13.5px; }
 .row > .tools { grid-area: x; display: flex; justify-content: flex-end; margin-top: 2px; }
 .handle { width: 28px; height: 36px; display: grid; place-items: center; border: 0; background: transparent; color: var(--muted); cursor: grab; touch-action: none; border-radius: 6px; padding: 0; }
 .handle:hover { background: var(--accent-soft); color: var(--accent); }
@@ -387,8 +378,6 @@ a.ev:hover { background: var(--bg); }
   /* phones: an assigned name sits on its own line under the title; the add-person icon stays up top */
   .row > .assign.set { grid-area: a; justify-self: start; margin: 0 0 4px; height: 24px; }
   .row > .assign:not(.set) { grid-area: a2; margin-top: 5px; width: 34px; height: 30px; opacity: .7; }
-  .team { padding: 10px; gap: 10px; }
-  .team .row { grid-template-columns: 40px 30px minmax(0, 1fr) auto auto; grid-template-areas: "n c t a2 x" ". . a a a" ". . note note note"; }
   #drag-hint { display: none !important; }
   .handle { width: 30px; height: 40px; }
   .num { font-size: 11px; }
@@ -403,7 +392,7 @@ a.ev:hover { background: var(--bg); }
   .note { font-size: 14px; }
   .adder input { font-size: 16px; }   /* 16px stops iPhone zooming in on tap */
   .note, .title { -webkit-user-select: text; }
-  .section-label > span:last-child:not(.cal-acts):not(.mail-acts):not(.todo-acts) { display: none; }
+  .section-label > span:last-child:not(.cal-acts):not(.mail-acts):not(.n) { display: none; }
   #mail-updated { display: none; }
   .done-toggle span:last-child { display: inline; }
   /* To-Do / Emails tabs */
@@ -467,14 +456,16 @@ a.ev:hover { background: var(--bg); }
   </form>
 
   <section class="sheet" aria-label="Open tasks">
-    <div class="section-label"><span>To-Do · Up next</span><span class="todo-acts"><span id="drag-hint" hidden>Drag ⋮⋮ to reorder</span><span class="view-seg" role="group" aria-label="View"><button type="button" data-view="list" aria-pressed="true">List</button><button type="button" data-view="team" aria-pressed="false">Team</button></span></span></div>
+    <div class="section-label"><span id="open-label">To-Do · Up next</span><span id="drag-hint" hidden>Drag ⋮⋮ to reorder</span></div>
     <ol id="open-list"></ol>
-    <div class="team" id="team" hidden></div>
+    <div class="none-left" id="none-left" hidden>Everything is assigned. Each person's list is below.</div>
     <div class="empty" id="empty" hidden>
       <p id="empty-text">Nothing on the list. Add the first task above.</p>
       <button class="btn" id="import-btn" type="button" hidden>Import tasks from the old list</button>
     </div>
   </section>
+
+  <div class="people" id="people"></div>
 
   <section class="sheet" id="done-sheet" aria-label="Completed tasks" hidden>
     <button class="done-toggle section-label" id="done-toggle" type="button" aria-expanded="false">
@@ -556,9 +547,8 @@ a.ev:hover { background: var(--bg); }
   var GRIP = '<svg viewBox="0 0 12 18" aria-hidden="true"><circle cx="3" cy="3" r="1.5"/><circle cx="9" cy="3" r="1.5"/><circle cx="3" cy="9" r="1.5"/><circle cx="9" cy="9" r="1.5"/><circle cx="3" cy="15" r="1.5"/><circle cx="9" cy="15" r="1.5"/></svg>';
   var TICK = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 7.5l2.6 2.5L11 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var FLAG = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 13V1.8M3 2h7.5l-1.6 2.6L10.5 7.2H3"/></svg>';
-  var PEOPLE = ["Becca", "Sam", "Carson", "Chase"];
+  var PEOPLE = ["Chase", "Becca", "Sam", "Carson"];
   var PERSON = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="5.2" r="2.6"/><path d="M2 13.5c.6-2.6 2.6-4 5-4 1 0 1.9.2 2.6.7M12.5 9.5v4M10.5 11.5h4"/></svg>';
-  var view = "list"; try { view = localStorage.getItem("todo-view") === "team" ? "team" : "list"; } catch (e) {}
   var NOTE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2.5h7l3 3v8H3z"/><path d="M5.5 8h5M5.5 10.5h3.5"/></svg>';
   var TRASH = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5"/></svg>';
 
@@ -630,25 +620,21 @@ a.ev:hover { background: var(--bg); }
       '<select aria-label="Assign to"' + (canEdit ? '' : ' disabled') + '><option value="">Nobody</option>' +
       PEOPLE.map(function (p) { return '<option' + (p === who ? ' selected' : '') + '>' + p + '</option>'; }).join('') + '</select></label>';
   }
-  function renderTeam(open) {
-    var box = $("team"); box.innerHTML = "";
-    var groups = PEOPLE.map(function (p) { return { name: p, items: open.filter(function (t) { return t.assignee === p; }) }; });
-    groups.push({ name: "Unassigned", items: open.filter(function (t) { return PEOPLE.indexOf(t.assignee) < 0; }), nobody: true });
-    groups.forEach(function (g) {
-      if (!g.items.length) return;   // only people with something to do
+  function groupOf(t) { return PEOPLE.indexOf(t.assignee) >= 0 ? t.assignee : ""; }
+  function renderPeople(open) {
+    var box = $("people"); box.innerHTML = "";
+    PEOPLE.forEach(function (p) {
+      var items = open.filter(function (t) { return t.assignee === p; });
+      if (!items.length) return;   // only people with something to do
       var c = document.createElement("section");
-      c.className = "team-col" + (g.nobody ? " nobody" : "");
-      c.setAttribute("aria-label", g.name);
-      c.innerHTML = '<div class="team-head"><span></span><span class="n"></span></div>';
-      c.querySelector(".team-head span").textContent = g.name;
-      c.querySelector(".team-head .n").textContent = g.items.length;
-      var ol = document.createElement("ol");
-      g.items.forEach(function (t, i) { ol.appendChild(itemEl(t, i, false)); });
+      c.className = "sheet person-sheet"; c.setAttribute("aria-label", p + "'s tasks");
+      c.innerHTML = '<div class="section-label"><span></span><span class="n"></span></div>';
+      c.querySelector(".section-label span").textContent = p;
+      c.querySelector(".section-label .n").textContent = items.length + (items.length === 1 ? " task" : " tasks");
+      var ol = document.createElement("ol"); ol.className = "person-list";
+      items.forEach(function (t, i) { ol.appendChild(itemEl(t, i, false)); });
       c.appendChild(ol); box.appendChild(c);
     });
-  }
-  function paintView() {
-    Array.prototype.forEach.call(document.querySelectorAll(".view-seg button"), function (b) { b.setAttribute("aria-pressed", b.dataset.view === view ? "true" : "false"); });
   }
   function render() {
     if (dragging) return;
@@ -658,10 +644,12 @@ a.ev:hover { background: var(--bg); }
     }
     var s = sorted();
     openList.innerHTML = "";
-    var team = view === "team";
-    openList.hidden = team; $("team").hidden = !team || !s.open.length;
-    if (team) renderTeam(s.open);
-    else { $("team").innerHTML = ""; s.open.forEach(function (t, i) { openList.appendChild(itemEl(t, i, false)); }); }
+    var mine = s.open.filter(function (t) { return !groupOf(t); });
+    mine.forEach(function (t, i) { openList.appendChild(itemEl(t, i, false)); });
+    renderPeople(s.open);
+    var anyAssigned = mine.length < s.open.length;
+    $("open-label").textContent = anyAssigned ? "To-Do · Unassigned" : "To-Do · Up next";
+    $("none-left").hidden = !(anyAssigned && !mine.length);
     doneList.innerHTML = "";
     s.done.forEach(function (t, i) { doneList.appendChild(itemEl(t, i, true)); });
     $("empty").hidden = !loaded || tasks.length > 0;
@@ -813,14 +801,9 @@ a.ev:hover { background: var(--bg); }
     };
     if (now) run(); else noteTimers[id] = setTimeout(run, 700);
   }
-  $("team").addEventListener("click", onClick);
-  document.querySelector(".view-seg").addEventListener("click", function (e) {
-    var b = e.target.closest("button[data-view]"); if (!b || b.dataset.view === view) return;
-    view = b.dataset.view; try { localStorage.setItem("todo-view", view); } catch (x) {}
-    paintView(); updateTabs(); render();
-  });
-  paintView();
-  [openList, doneList, $("team")].forEach(function (list) {
+  var peopleBox = $("people");
+  peopleBox.addEventListener("click", onClick);
+  [openList, doneList, peopleBox].forEach(function (list) {
     list.addEventListener("change", function (e) {   // assign pulldown
       var sel = e.target.closest(".assign select"); if (!sel) return;
       var li = sel.closest(".item"), t = li && find(li.dataset.id); if (!t || !canEdit) return;
@@ -864,18 +847,22 @@ a.ev:hover { background: var(--bg); }
     if (!after) return (before.order || 0) + 1000;
     return ((before.order || 0) + (after.order || 0)) / 2;
   }
+  function groupList(id) {   // the tasks shown in the same list as this one, in order
+    var me = find(id), g = me ? groupOf(me) : "";
+    return sorted().open.filter(function (t) { return groupOf(t) === g; });
+  }
   function moveBy(id, delta) {
     if (!canEdit) return;
-    var open = sorted().open, i = open.findIndex(function (t) { return t.id === id; });
+    var open = groupList(id), i = open.findIndex(function (t) { return t.id === id; });
     var j = i + delta; if (i < 0 || j < 0 || j >= open.length) return;
     write(id, { order: orderFor(open, j, id) });
     var h = document.querySelector('.item[data-id="' + id + '"] .handle'); if (h) h.focus();
   }
-  openList.addEventListener("pointerdown", function (e) {
+  function onDragStart(e) {
     var handle = e.target.closest(".handle"); if (!handle || !canEdit) return;
     e.preventDefault();
     var li = handle.closest(".item");
-    var items = Array.prototype.slice.call(openList.children);
+    var items = Array.prototype.slice.call(li.parentElement.children);
     var rects = items.map(function (el) { return el.getBoundingClientRect(); });
     var startIdx = items.indexOf(li);
     dragging = { id: li.dataset.id, li: li, items: items, rects: rects, startIdx: startIdx, target: startIdx, startY: e.clientY, h: rects[startIdx].height };
@@ -883,8 +870,8 @@ a.ev:hover { background: var(--bg); }
     items.forEach(function (el) { if (el !== li) el.classList.add("drag-anim"); });
     document.body.classList.add("is-dragging");
     handle.setPointerCapture(e.pointerId);
-  });
-  openList.addEventListener("pointermove", function (e) {
+  }
+  function onDragMove(e) {
     if (!dragging) return;
     var d = dragging, dy = e.clientY - d.startY;
     d.li.style.transform = "translateY(" + dy + "px)";
@@ -898,17 +885,21 @@ a.ev:hover { background: var(--bg); }
       if (d.startIdx > target && i < d.startIdx && i >= target) shift = d.h;
       el.style.transform = shift ? "translateY(" + shift + "px)" : "";
     });
-  });
+  }
   function endDrag() {
     if (!dragging) return;
     var d = dragging; dragging = null;
     d.items.forEach(function (el) { el.style.transform = ""; el.classList.remove("drag-anim", "dragging"); });
     document.body.classList.remove("is-dragging");
-    if (d.target !== d.startIdx) write(d.id, { order: orderFor(sorted().open, d.target, d.id) });
+    if (d.target !== d.startIdx) write(d.id, { order: orderFor(groupList(d.id), d.target, d.id) });
     else render();
   }
-  openList.addEventListener("pointerup", endDrag);
-  openList.addEventListener("pointercancel", endDrag);
+  [openList, peopleBox].forEach(function (box) {
+    box.addEventListener("pointerdown", onDragStart);
+    box.addEventListener("pointermove", onDragMove);
+    box.addEventListener("pointerup", endDrag);
+    box.addEventListener("pointercancel", endDrag);
+  });
 
   // ---------- boot ----------
   var cfg = window.FIREBASE_CONFIG;
@@ -963,7 +954,7 @@ a.ev:hover { background: var(--bg); }
     $("cal").hidden = !calOK;
     var t = document.body.dataset.tab;
     if ((t === "music" && !musicOK) || (t === "mail" && !mailOK) || (t === "calendar" && !calOK)) setTab("todo");
-    document.querySelector(".wrap").classList.toggle("wide", mailOK || (musicOK && t === "music") || (calOK && t === "calendar") || (view === "team" && t !== "music" && t !== "calendar"));
+    document.querySelector(".wrap").classList.toggle("wide", mailOK || (musicOK && t === "music") || (calOK && t === "calendar"));
   }
   wideMQ.addEventListener && wideMQ.addEventListener("change", function () { setTab(document.body.dataset.tab || "todo"); });
   function showMail(on) {
