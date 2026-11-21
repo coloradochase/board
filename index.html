@@ -16,15 +16,15 @@
   .shade { position: fixed; inset: 0;
     background: linear-gradient(90deg, rgba(0,0,0,.6) 0%, rgba(0,0,0,.2) 45%, rgba(0,0,0,.6) 100%),
                 linear-gradient(180deg, rgba(0,0,0,.5) 0%, rgba(0,0,0,0) 50%); }
-  .wrap { position: fixed; inset: 0; display: flex; justify-content: space-between;
-    flex-direction: row-reverse; align-items: flex-start; padding: 6vh 4.5vw; box-sizing: border-box; }
+  .wrap { position: fixed; inset: 0; display: flex; justify-content: space-between; gap: 2vw;
+    align-items: flex-start; padding: 6vh 4.5vw; box-sizing: border-box; }
 
   .time { text-align: right; text-shadow: 0 .3vw 2vw rgba(0,0,0,.45); }
-  .clock { font-size: 15vw; font-weight: 200; line-height: .85; letter-spacing: -.02em; }
-  .clock .ampm { font-size: 3.4vw; font-weight: 300; letter-spacing: .05em; margin-left: .8vw; }
-  .date { font-size: 3vw; font-weight: 300; margin-top: 2.2vh; opacity: .92; }
+  .clock { font-size: 10.5vw; font-weight: 200; line-height: .85; letter-spacing: -.02em; white-space: nowrap; }
+  .clock .ampm { font-size: 2.6vw; font-weight: 300; letter-spacing: .05em; margin-left: .6vw; }
+  .date { font-size: 2.3vw; font-weight: 300; margin-top: 2vh; opacity: .92; white-space: nowrap; }
 
-  .panel { width: 33vw; max-height: 88vh; overflow: hidden; background: rgba(0,0,0,.38);
+  .panel { width: 28vw; flex: none; max-height: 88vh; overflow: hidden; background: rgba(0,0,0,.38);
     border-radius: 1.4vw; padding: 2.4vw 2.4vw 1.6vw; box-sizing: border-box; }
   .panel.fade { height: 88vh;
     -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
@@ -38,7 +38,7 @@
   .ev .when { font-size: 1.2vw; font-weight: 400; opacity: .75; margin-bottom: .2vw; }
   .ev .title { font-size: 1.75vw; font-weight: 400; line-height: 1.2; }
   .ev .loc { font-size: 1.1vw; opacity: .6; margin-top: .2vw; white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis; max-width: 26vw; }
+    overflow: hidden; text-overflow: ellipsis; max-width: 21vw; }
   .ev.past { opacity: .4; }
   .ev.now .when { opacity: 1; font-weight: 500; }
   .tag { display: inline-block; font-size: .9vw; font-weight: 500; letter-spacing: .15em;
@@ -50,9 +50,9 @@
 
   [hidden] { display: none !important; }
   /* To-do panel: under the clock, same glass as the calendar panel */
-  .right { display: flex; flex-direction: column; align-items: flex-end; max-height: 88vh; }
-  .todo { width: 33vw; margin-top: 4.5vh; background: rgba(0,0,0,.38); border-radius: 1.4vw;
-    padding: 2vw 2.4vw 1.2vw; box-sizing: border-box; overflow: hidden; min-height: 0; flex: 0 1 auto; }
+  .right { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-end; max-height: 88vh; }
+  .todo { width: 26vw; flex: none; max-height: 88vh; background: rgba(0,0,0,.38); border-radius: 1.4vw;
+    padding: 2vw 2.4vw 1.2vw; box-sizing: border-box; overflow: hidden; }
   .todo.fade { -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 70%, transparent 100%);
     mask-image: linear-gradient(180deg, #000 0%, #000 70%, transparent 100%); }
   .todo-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.2vw; }
@@ -63,10 +63,26 @@
     border-radius: .3vw; box-sizing: border-box; }
   .task .t { font-size: 1.6vw; font-weight: 400; line-height: 1.25; }
   .task .n { font-size: 1.1vw; opacity: .6; margin-top: .15vw; white-space: nowrap; overflow: hidden;
-    text-overflow: ellipsis; max-width: 25vw; }
+    text-overflow: ellipsis; max-width: 19vw; }
   .task.just-done { opacity: .45; }
   .task.just-done .t { text-decoration: line-through; }
   .task.just-done .box { background: rgba(255,255,255,.85); }
+  /* Emails: under the clock, the same cards as the Emails tab on the to-do site */
+  .mail { width: 100%; max-width: 32vw; margin-top: 4vh; background: rgba(0,0,0,.38); border-radius: 1.4vw;
+    padding: 2vw 2.4vw 1.2vw; box-sizing: border-box; overflow: hidden; min-height: 0; flex: 0 1 auto; }
+  .mail.fade { -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 70%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 0%, #000 70%, transparent 100%); }
+  .mcard { margin-bottom: 1.3vw; }
+  .mcard .mt { display: flex; justify-content: space-between; align-items: flex-start; gap: .8vw; }
+  .mcard .mtitle { font-size: 1.45vw; font-weight: 400; line-height: 1.2; min-width: 0; }
+  .mcard .chip { flex: none; font-size: .8vw; font-weight: 500; letter-spacing: .08em; text-transform: uppercase;
+    padding: .2vw .6vw; border-radius: 1vw; white-space: nowrap; margin-top: .2vw; }
+  .chip.need { background: rgba(255,255,255,.92); color: #000; }
+  .chip.wait { border: .1vw solid rgba(255,255,255,.6); opacity: .85; }
+  .chip.fyi { opacity: .55; padding-left: 0; padding-right: 0; }
+  .mcard .msum { font-size: 1.05vw; line-height: 1.4; opacity: .8; margin-top: .3vw;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .mcard .mmeta { font-size: .9vw; opacity: .5; margin-top: .25vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 </style>
 </head>
 <body>
@@ -75,18 +91,22 @@
 <div class="shade"></div>
 
 <div class="wrap">
+  <div class="panel" id="panel">
+    <div id="events"></div>
+  </div>
+  <div class="todo" id="todo" hidden>
+    <div class="todo-head"><div class="day">To-Do</div><div class="todo-count" id="todo-count"></div></div>
+    <div id="tasks"></div>
+  </div>
   <div class="right">
     <div class="time">
       <div class="clock" id="clock"></div>
       <div class="date" id="date"></div>
     </div>
-    <div class="todo" id="todo" hidden>
-      <div class="todo-head"><div class="day">To-Do</div><div class="todo-count" id="todo-count"></div></div>
-      <div id="tasks"></div>
+    <div class="mail" id="mail" hidden>
+      <div class="todo-head"><div class="day">Emails</div><div class="todo-count" id="mail-count"></div></div>
+      <div id="mails"></div>
     </div>
-  </div>
-  <div class="panel" id="panel">
-    <div id="events"></div>
   </div>
 </div>
 <div class="status" id="status"></div>
@@ -175,6 +195,7 @@ function tick() {
     lastDay = today;
 
     render();
+    renderMail();
     updateStatus();
 
     if (np.h === NIGHTLY_RELOAD_HOUR && np.min === 0 &&
@@ -187,7 +208,7 @@ function tick() {
 
 // ----- Calendar -----
 function fetchCalendar() {
-  if (DEMO) { data = demoData(); lastOk = Date.now(); render(); return; }
+  if (DEMO) { data = demoData(); lastOk = Date.now(); render(); renderMail(); return; }
   if (!TOKEN) { lastError = 'Add #k=yourtoken to the end of this page’s address.'; render(); return; }
   if (API_URL.indexOf('http') !== 0) { lastError = 'Paste your Apps Script URL into API_URL in index.html.'; render(); return; }
 
@@ -198,7 +219,7 @@ function fetchCalendar() {
       if (json.error) throw new Error(json.error === 'unauthorized' ? 'Token doesn’t match the one in Code.gs.' : json.error);
       data = json; lastOk = Date.now(); lastError = '';
       store('boardCache', JSON.stringify(json));
-      render(); updateStatus();
+      render(); renderMail(); updateStatus();
     })
     .catch(function (err) {
       lastError = err && err.message ? err.message : 'Could not reach calendar.';
@@ -334,8 +355,50 @@ function demoData() {
       { title: 'Flight home', allDay: false, start: at(5, 12, 0), end: at(5, 14, 30), color: '#f6bf26', location: 'LAX' },
       { title: 'Content shoot', allDay: false, start: at(7, 11, 0), end: at(7, 15, 0), color: '#8e24aa', location: '' },
       { title: 'Management call', allDay: false, start: at(8, 10, 0), end: at(8, 11, 0), color: '#039be5', location: '' }
-    ]
+    ],
+    emails: { lastRun: Date.now(), items: [
+      { title: 'MC4D March date offer', summary: 'Promoter offered a March 3 slot at $1,500 and needs an answer by Friday.', status: 'Needs reply', people: ['Promoter'], lastDate: Date.now() - 3 * 3600000 },
+      { title: 'AGT video call prep', summary: 'Becca shared the questions for Friday. Nothing needed until then.', status: 'FYI', people: ['Becca Haddad'], lastDate: Date.now() - 26 * 3600000 },
+      { title: 'Mix revisions for Gone', summary: 'Sent v3 to Carson, waiting on his notes.', status: 'Waiting on them', people: ['Carson Becker'], lastDate: Date.now() - 2 * 86400000 }
+    ] }
   };
+}
+
+// ----- Emails (the same cards as the Emails tab on the to-do site) -----
+// They come through the calendar script with your token, since the database keeps them private.
+var MAIL_RANK = { 'Needs reply': 0, 'Waiting on them': 1, 'FYI': 2 };
+var MAIL_CHIP = { 'Needs reply': 'need', 'Waiting on them': 'wait', 'FYI': 'fyi' };
+function ago(ms) {
+  var s = Math.max(0, (Date.now() - ms) / 1000);
+  if (s < 90) return 'just now';
+  if (s < 3600) return Math.round(s / 60) + ' min ago';
+  if (s < 86400) return Math.round(s / 3600) + 'h ago';
+  var d = Math.round(s / 86400);
+  return d === 1 ? 'yesterday' : d + ' days ago';
+}
+function renderMail() {
+  var panel = document.getElementById('mail');
+  var em = data && data.emails;
+  if (!em || (em.error && !(em.items || []).length)) { panel.hidden = true; return; }
+  var items = (em.items || []).slice().sort(function (a, b) {
+    var ra = a.status in MAIL_RANK ? MAIL_RANK[a.status] : 2, rb = b.status in MAIL_RANK ? MAIL_RANK[b.status] : 2;
+    return (ra - rb) || ((b.lastDate || 0) - (a.lastDate || 0));
+  });
+  var need = items.filter(function (m) { return m.status === 'Needs reply'; }).length;
+  document.getElementById('mail-count').textContent = need ? need + ' need reply' : '';
+  var html = '';
+  if (!items.length) html = '<div class="none">No active Chasyn email in the last two weeks</div>';
+  items.forEach(function (m) {
+    var who = (m.people || []).slice(0, 2).join(', ');
+    html += '<div class="mcard"><div class="mt"><div class="mtitle">' + esc(m.title || 'Email') + '</div>' +
+      '<div class="chip ' + (MAIL_CHIP[m.status] || 'fyi') + '">' + esc(m.status || 'FYI') + '</div></div>' +
+      (m.summary ? '<div class="msum">' + esc(m.summary) + '</div>' : '') +
+      '<div class="mmeta">' + esc((who ? who + ' \u00b7 ' : '') + (m.lastDate ? ago(m.lastDate) : '')) + '</div></div>';
+  });
+  document.getElementById('mails').innerHTML = html;
+  panel.hidden = false;
+  panel.className = 'mail';
+  if (panel.scrollHeight > panel.clientHeight + 2) panel.className = 'mail fade';
 }
 
 // ----- To-do list (live from Firebase, read-only on the TV) -----
