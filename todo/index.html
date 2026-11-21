@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Chasyn To-Do</title>
+<title>Chasyn Management</title>
 <meta name="theme-color" content="#ece2d2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#19130e" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -44,6 +44,26 @@ body {
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 .wrap { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+@media (min-width: 1180px) { .wrap.wide { max-width: 1320px; } }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+@media (min-width: 1180px) { .grid.has-mail { grid-template-columns: minmax(0, 1fr) 400px; } .mail { position: sticky; top: 20px; } }
+
+/* Emails block */
+.mail-list { display: flex; flex-direction: column; }
+.mail-card { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.mail-card:last-child { border-bottom: 0; }
+.mail-card:hover { background: var(--bg); }
+.mail-card:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.mc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.mc-title { font-family: var(--display); font-weight: 700; font-size: 16px; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
+.mc-sum { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink); opacity: .85; }
+.mc-meta { font-family: var(--mono); font-size: 11px; color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { flex: none; font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; white-space: nowrap; margin-top: 1px; }
+.chip.need { background: var(--accent); color: var(--sheet); }
+.chip.wait { border: 1px solid var(--muted); color: var(--muted); }
+.chip.fyi { color: var(--muted); padding-left: 0; padding-right: 0; }
+.mail-empty { padding: 18px 16px; color: var(--muted); font-size: 13.5px; }
 header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 h1 { font-family: var(--display); font-weight: 700; font-size: 32px; letter-spacing: -0.01em; margin: 0; }
 .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
@@ -135,8 +155,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 <div class="wrap">
   <header>
     <div>
-      <p class="eyebrow">Running list · Team</p>
-      <h1>Chasyn To-Do</h1>
+      <p class="eyebrow">Team dashboard</p>
+      <h1>Chasyn Management</h1>
     </div>
     <div class="meta">
       <div class="count" id="count"><b>0</b> open · 0 done</div>
@@ -145,17 +165,19 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   </header>
 
   <div class="signin" id="signin">
-    <p>Viewing only. Sign in with your Google account to add, check off and edit tasks.</p>
+    <p>Viewing only. Sign in with your Google account to edit tasks and see email updates.</p>
     <button class="btn" id="signin-btn" type="button">Sign in with Google</button>
   </div>
 
+  <div class="grid" id="grid">
+  <div class="col">
   <form class="adder" id="adder" autocomplete="off" hidden>
     <input id="new-task" type="text" placeholder="Add a task and press Enter" aria-label="New task" maxlength="300">
     <button class="btn" type="submit">Add</button>
   </form>
 
   <section class="sheet" aria-label="Open tasks">
-    <div class="section-label"><span>Up next</span><span id="drag-hint" hidden>Drag ⋮⋮ to reorder</span></div>
+    <div class="section-label"><span>To-Do · Up next</span><span id="drag-hint" hidden>Drag ⋮⋮ to reorder</span></div>
     <ol id="open-list"></ol>
     <div class="empty" id="empty" hidden>
       <p id="empty-text">Nothing on the list. Add the first task above.</p>
@@ -169,6 +191,14 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     </button>
     <ol id="done-list" hidden></ol>
   </section>
+  </div>
+
+  <section class="sheet mail" id="mail" aria-label="Emails" hidden>
+    <div class="section-label"><span>Emails</span><span id="mail-updated"></span></div>
+    <div class="mail-list" id="mail-list"></div>
+    <div class="mail-empty" id="mail-empty" hidden></div>
+  </section>
+  </div>
 
   <div class="status" id="status">Loading the list…</div>
 </div>
@@ -470,10 +500,75 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     setStatus("Couldn't load the list (" + (e.code || "error") + "). Reload to try again.", true);
   });
 
+  // ---------- emails (team only; the rules hide them from everyone else) ----------
+  var mailTasks = null, mailMeta = null, mailUnsubs = [];
+  function showMail(on) {
+    $("mail").hidden = !on;
+    $("grid").classList.toggle("has-mail", on);
+    document.querySelector(".wrap").classList.toggle("wide", on);
+  }
+  function ago(ms) {
+    var s = Math.max(0, (Date.now() - ms) / 1000);
+    if (s < 90) return "just now";
+    if (s < 3600) return Math.round(s / 60) + " min ago";
+    if (s < 86400) return Math.round(s / 3600) + "h ago";
+    var d = Math.round(s / 86400);
+    return d === 1 ? "yesterday" : d + " days ago";
+  }
+  var CHIP = { "Needs reply": "need", "Waiting on them": "wait", "FYI": "fyi" };
+  var RANK = { "Needs reply": 0, "Waiting on them": 1, "FYI": 2 };
+  function renderMail() {
+    var list = $("mail-list"), empty = $("mail-empty");
+    $("mail-updated").textContent = mailMeta && mailMeta.lastRun ? "Updated " + ago(mailMeta.lastRun) : "";
+    if (!mailTasks) return;
+    var items = mailTasks.slice().sort(function (a, b) {
+      var ra = a.status in RANK ? RANK[a.status] : 2, rb = b.status in RANK ? RANK[b.status] : 2;
+      var r = ra - rb;
+      return r || (b.lastDate || 0) - (a.lastDate || 0);
+    });
+    list.innerHTML = "";
+    items.forEach(function (m) {
+      var a = document.createElement("a");
+      a.className = "mail-card";
+      a.href = /^https:\/\/mail\.google\.com\//.test(m.link || "") ? m.link : "https://mail.google.com/";
+      a.target = "_blank"; a.rel = "noopener";
+      a.title = m.subject || "";
+      var top = document.createElement("div"); top.className = "mc-top";
+      var t = document.createElement("span"); t.className = "mc-title"; t.textContent = m.title || m.subject || "Email";
+      var c = document.createElement("span"); c.className = "chip " + (CHIP[m.status] || "fyi"); c.textContent = m.status || "FYI";
+      top.appendChild(t); top.appendChild(c); a.appendChild(top);
+      if (m.summary) { var p = document.createElement("p"); p.className = "mc-sum"; p.textContent = m.summary; a.appendChild(p); }
+      var meta = document.createElement("div"); meta.className = "mc-meta";
+      var who = (m.people || []).slice(0, 3).join(", ");
+      meta.textContent = (who ? who + " · " : "") + (m.lastDate ? ago(m.lastDate) : "");
+      a.appendChild(meta);
+      list.appendChild(a);
+    });
+    empty.hidden = items.length > 0;
+    empty.textContent = mailMeta ? "No active Chasyn email in the last two weeks." : "Email updates aren't connected yet. They'll appear here once the email sync is running.";
+  }
+  function startMail() {
+    stopMail();
+    var db = col.firestore;
+    mailUnsubs.push(db.collection("emails").onSnapshot(function (snap) {
+      mailTasks = snap.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); });
+      showMail(true); renderMail();
+    }, function () { stopMail(); }));            // not on the team list: keep the block hidden
+    mailUnsubs.push(db.collection("emailsMeta").doc("status").onSnapshot(function (d) {
+      mailMeta = d.exists ? d.data() : null; renderMail();
+    }, function () {}));
+  }
+  function stopMail() {
+    mailUnsubs.forEach(function (u) { try { u(); } catch (e) {} });
+    mailUnsubs = []; mailTasks = null; mailMeta = null; showMail(false);
+  }
+  setInterval(renderMail, 60000);
+
   auth.onAuthStateChanged(function (u) {
     user = u;
     canEdit = !!u;   // the database rules have the final say; a refused write shows a message
     setEditMode();
+    if (u) startMail(); else stopMail();
   });
 })();
 </script>

@@ -30,6 +30,17 @@ service cloud.firestore {
       allow delete: if isEditor();
     }
 
+    // Email cards: team only. Only the Email Sync script (running as the
+    // project owner) writes them, so nobody can change them from the page.
+    match /emails/{threadId} {
+      allow read: if isEditor();
+      allow write: if false;
+    }
+    match /emailsMeta/{doc} {
+      allow read: if isEditor();
+      allow write: if false;
+    }
+
     // The team list itself is private; only the rules above read it.
     match /config/{doc} {
       allow read, write: if false;
