@@ -6,6 +6,13 @@
 <title>Chasyn Management</title>
 <meta name="theme-color" content="#ece2d2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#19130e" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Chasyn">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -93,7 +100,7 @@ ol { list-style: none; margin: 0; padding: 0; }
 .row > .handle, .row > .grip-gap { grid-area: h; }
 .row > .num { grid-area: n; line-height: 36px; }
 .row > .check { grid-area: c; margin-top: 7px; }
-.row > .title { grid-area: t; height: 36px; }
+.row > .title { grid-area: t; }
 .row > .note-cell { grid-area: note; min-width: 0; padding-top: 1px; }
 .row > .tools { grid-area: x; display: flex; justify-content: flex-end; margin-top: 2px; }
 .handle { width: 28px; height: 36px; display: grid; place-items: center; border: 0; background: transparent; color: var(--muted); cursor: grab; touch-action: none; border-radius: 6px; padding: 0; }
@@ -105,7 +112,7 @@ ol { list-style: none; margin: 0; padding: 0; }
 .check:hover { border-color: var(--accent); }
 .item.done .check { background: var(--accent); border-color: var(--accent); }
 .item.done .check svg { opacity: 1; }
-.title { min-width: 0; border: 0; background: transparent; color: var(--ink); font: 500 15px var(--body); padding: 6px 4px; border-radius: 6px; width: 100%; }
+.title { display: block; min-width: 0; min-height: 36px; height: 36px; border: 0; background: transparent; color: var(--ink); font: 500 15px/1.6 var(--body); padding: 6px 4px; border-radius: 6px; width: 100%; resize: none; overflow: hidden; }
 .title:hover:not([readonly]) { background: var(--bg); }
 .item.done .title { color: var(--done); text-decoration: line-through; }
 .icon-btn { border: 0; background: transparent; color: var(--muted); cursor: pointer; width: 32px; height: 32px; border-radius: 6px; display: grid; place-items: center; padding: 0; }
@@ -138,15 +145,50 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .status { font-family: var(--mono); font-size: 12px; color: var(--muted); text-align: center; min-height: 18px; }
 .status.err { color: var(--danger); }
 
+/* Note button: touch screens only (desktop reveals notes on hover) */
+.note-btn { display: none; }
+.icon-btn.note-btn:hover { color: var(--accent); }
+.tabs { display: none; }
 @media (hover: none) {
   .note:not([readonly]) { background: var(--bg); border-color: var(--line); }
   .note:not([readonly])::placeholder { color: var(--muted); }
   .item .icon-btn { opacity: 1; }
+  .note-btn { display: grid; }
+  .item.has-note .note-btn { display: none; }
+  /* Empty note boxes stay hidden until the note button is tapped */
+  .item:not(.noting) .note-cell.empty { display: none; }
 }
-@media (max-width: 600px) {
-  h1 { font-size: 26px; }
-  .row { grid-template-columns: 26px 22px 24px minmax(0, 1fr) auto; grid-template-areas: "h n c t x" ". . . note note"; gap: 4px; }
-  .meta { align-items: flex-start; }
+@media (max-width: 700px) {
+  body { padding-top: max(18px, env(safe-area-inset-top, 0px)); }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); background: var(--bg); z-index: 10; }
+  .wrap { gap: 14px; }
+  .eyebrow { display: none; }
+  h1 { font-size: 24px; }
+  header { align-items: center; }
+  .meta { align-items: flex-end; gap: 2px; }
+  .who img { display: none; }
+  .row { grid-template-columns: 30px 18px 30px minmax(0, 1fr) auto; grid-template-areas: "h n c t x" ". . . note note"; gap: 2px 6px; padding: 8px 6px 8px 2px; }
+  .handle { width: 30px; height: 40px; }
+  .num { line-height: 40px; font-size: 11px; }
+  .row > .check { margin-top: 6px; }
+  .check { width: 28px; height: 28px; border-radius: 8px; }
+  .check svg { width: 16px; height: 16px; }
+  .title { font-size: 16px; line-height: 1.4; padding-top: 9px; padding-bottom: 7px; min-height: 40px; }
+  .row > .tools { margin-top: 0; gap: 0; }
+  .icon-btn { width: 40px; height: 40px; }
+  .note { font-size: 14px; }
+  .adder input { font-size: 16px; }   /* 16px stops iPhone zooming in on tap */
+  .note, .title { -webkit-user-select: text; }
+  .section-label span:last-child { display: none; }
+  .done-toggle span:last-child { display: inline; }
+  /* To-Do / Emails tabs */
+  .tabs { display: flex; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding: 4px 0 6px; gap: 6px; }
+  .tabs button { flex: 1; font: 500 14px var(--body); color: var(--muted); background: var(--sheet); border: 1px solid var(--line); border-radius: 999px; padding: 10px 12px; cursor: pointer; }
+  .tabs button.on { background: var(--accent); border-color: var(--accent); color: var(--sheet); }
+  .tabs .badge { font-family: var(--mono); font-size: 11px; margin-left: 4px; opacity: .85; }
+  body.tabbed[data-tab="mail"] .col { display: none; }
+  body.tabbed[data-tab="todo"] .mail { display: none; }
+  .mail-card { padding: 16px 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .item.drag-anim, .note { transition: none; } }
 </style>
@@ -168,6 +210,11 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     <p>Viewing only. Sign in with your Google account to edit tasks and see email updates.</p>
     <button class="btn" id="signin-btn" type="button">Sign in with Google</button>
   </div>
+
+  <nav class="tabs" id="tabs" aria-label="Sections" hidden>
+    <button type="button" data-tab="todo" class="on" aria-pressed="true">To-Do<span class="badge" id="tab-todo-n"></span></button>
+    <button type="button" data-tab="mail" aria-pressed="false">Emails<span class="badge" id="tab-mail-n"></span></button>
+  </nav>
 
   <div class="grid" id="grid">
   <div class="col">
@@ -212,12 +259,13 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 (function () {
   var GRIP = '<svg viewBox="0 0 12 18" aria-hidden="true"><circle cx="3" cy="3" r="1.5"/><circle cx="9" cy="3" r="1.5"/><circle cx="3" cy="9" r="1.5"/><circle cx="9" cy="9" r="1.5"/><circle cx="3" cy="15" r="1.5"/><circle cx="9" cy="15" r="1.5"/></svg>';
   var TICK = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 7.5l2.6 2.5L11 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var NOTE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2.5h7l3 3v8H3z"/><path d="M5.5 8h5M5.5 10.5h3.5"/></svg>';
   var TRASH = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5"/></svg>';
 
   var $ = function (id) { return document.getElementById(id); };
   var openList = $("open-list"), doneList = $("done-list");
   var tasks = [], loaded = false, canEdit = false, user = null;
-  var confirming = null, showDone = false, dragging = null;
+  var confirming = null, showDone = false, dragging = null, notingId = null;
   var col, auth;
 
   try { showDone = localStorage.getItem("todo-showdone") === "1"; } catch (e) {}
@@ -234,7 +282,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   // ---------- render ----------
   function itemEl(t, idx, isDone) {
     var li = document.createElement("li");
-    li.className = "item" + (t.done ? " done" : "");
+    li.className = "item" + (t.done ? " done" : "") + (t.notes ? " has-note" : "") + (notingId === t.id ? " noting" : "");
     li.dataset.id = t.id;
     var ro = canEdit ? "" : " readonly";
     var row = document.createElement("div");
@@ -243,15 +291,16 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       (isDone ? '<span class="grip-gap"></span>' : '<button class="handle" type="button" aria-label="Reorder (drag, or use arrow keys)">' + GRIP + '</button>') +
       '<span class="num">' + (isDone ? "" : pad(idx + 1)) + '</span>' +
       '<button class="check" type="button" role="checkbox" aria-checked="' + (t.done ? "true" : "false") + '" aria-label="Mark complete"' + (canEdit ? "" : " disabled") + '>' + TICK + '</button>' +
-      '<input class="title" type="text" maxlength="300" aria-label="Task"' + ro + '>' +
-      ((canEdit || t.notes) ? '<div class="note-cell"><textarea class="note" id="note-' + t.id + '" rows="1" placeholder="Add a note…" aria-label="Notes for task"' + ro + '></textarea></div>' : '') +
+      '<textarea class="title" rows="1" maxlength="300" aria-label="Task"' + ro + '></textarea>' +
+      ((canEdit || t.notes) ? '<div class="note-cell' + (t.notes ? '' : ' empty') + '"><textarea class="note" id="note-' + t.id + '" rows="1" placeholder="Add a note…" aria-label="Notes for task"' + ro + '></textarea></div>' : '') +
       '<div class="tools"></div>';
     row.querySelector(".title").value = t.title || "";
     if (row.querySelector(".note")) row.querySelector(".note").value = t.notes || "";
     if (confirming === t.id) {
       row.querySelector(".note-cell").innerHTML = '<div class="confirm"><span>Delete this task?</span><button class="yes" type="button">Delete</button><button class="no" type="button">Keep</button></div>';
     } else {
-      row.querySelector(".tools").innerHTML = '<button class="icon-btn del" type="button" aria-label="Delete task">' + TRASH + '</button>';
+      row.querySelector(".tools").innerHTML = '<button class="icon-btn note-btn" type="button" aria-label="Add a note">' + NOTE + '</button>' +
+        '<button class="icon-btn del" type="button" aria-label="Delete task">' + TRASH + '</button>';
     }
     li.appendChild(row);
     return li;
@@ -278,6 +327,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     $("done-label").textContent = "Completed · " + s.done.length;
     $("done-caret").textContent = showDone ? "Hide" : "Show";
     $("count").innerHTML = "<b>" + s.open.length + "</b> open · " + s.done.length + " done";
+    $("tab-todo-n").textContent = s.open.length || "";
     $("drag-hint").hidden = !canEdit;
     if (keep) {
       var li = document.querySelector('.item[data-id="' + keep.id + '"]');
@@ -294,12 +344,15 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   function grow(ta) {
     if (!ta.offsetParent) return;
     ta.style.height = "auto";
-    ta.style.height = (ta.scrollHeight + 2) + "px";
+    ta.style.height = (ta.scrollHeight + (ta.classList.contains("title") ? 0 : 2)) + "px";
   }
-  function growAll() { Array.prototype.forEach.call(document.querySelectorAll("textarea.note"), grow); }
+  function growAll() { Array.prototype.forEach.call(document.querySelectorAll("textarea.note, textarea.title"), grow); }
   var rz = 0;
   window.addEventListener("resize", function () { cancelAnimationFrame(rz); rz = requestAnimationFrame(growAll); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(growAll);
+  if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener("loadingdone", growAll);
+  window.addEventListener("load", growAll);
+  window.addEventListener("pageshow", growAll);   // returning to the home-screen app
 
   function setEditMode() {
     document.body.classList.toggle("readonly", !canEdit);
@@ -378,6 +431,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
         write(id, { done: false, doneAt: firebase.firestore.FieldValue.delete(), order: open.length ? (open[open.length - 1].order || 0) + 1000 : 1000 });
         delete t.doneAt;
       } else write(id, { done: true, doneAt: Date.now() });
+    } else if (e.target.closest(".note-btn")) {
+      notingId = id; render();
+      var ta = document.getElementById("note-" + id); if (ta) { ta.focus(); grow(ta); }
     } else if (e.target.closest(".del")) { confirming = id; render(); }
     else if (e.target.closest(".yes")) {
       confirming = null; tasks = tasks.filter(function (x) { return x.id !== id; }); render();
@@ -390,8 +446,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 
   function saveTitle(input) {
     var li = input.closest(".item"), t = li && find(li.dataset.id); if (!t || !canEdit) return;
-    var v = input.value.trim();
+    var v = input.value.replace(/\s*\n\s*/g, " ").trim();
     if (!v) { input.value = t.title; return; }
+    input.value = v;
     if (v !== t.title) write(t.id, { title: v });
   }
   var noteTimers = {}, savedNotes = {};
@@ -412,7 +469,11 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   [openList, doneList].forEach(function (list) {
     list.addEventListener("focusout", function (e) {
       if (e.target.classList.contains("title")) saveTitle(e.target);
-      if (e.target.tagName === "TEXTAREA") { saveNote(e.target, true); grow(e.target); }
+      if (e.target.classList.contains("note")) {
+        saveNote(e.target, true); grow(e.target);
+        var li = e.target.closest(".item");
+        if (li && li.dataset.id === notingId && !e.target.value.trim()) { notingId = null; setTimeout(render, 0); }
+      }
     });
     list.addEventListener("keydown", function (e) {
       if (e.target.classList.contains("title") && e.key === "Enter") { e.preventDefault(); e.target.blur(); }
@@ -420,7 +481,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
         e.preventDefault(); moveBy(e.target.closest(".item").dataset.id, e.key === "ArrowUp" ? -1 : 1);
       }
     });
-    list.addEventListener("input", function (e) { if (e.target.tagName === "TEXTAREA") { grow(e.target); saveNote(e.target, false); } });
+    list.addEventListener("input", function (e) {
+      if (e.target.classList.contains("note")) { grow(e.target); saveNote(e.target, false); }
+      if (e.target.classList.contains("title")) grow(e.target);
+    });
   });
 
   // ---------- reorder ----------
@@ -502,8 +566,21 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 
   // ---------- emails (team only; the rules hide them from everyone else) ----------
   var mailTasks = null, mailMeta = null, mailUnsubs = [];
+  function setTab(tab) {
+    document.body.dataset.tab = tab;
+    Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) {
+      var on = b.dataset.tab === tab; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    try { localStorage.setItem("todo-tab", tab); } catch (e) {}
+    growAll();
+  }
+  $("tabs").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) { setTab(b.dataset.tab); window.scrollTo(0, 0); } });
+  (function () { var t = "todo"; try { t = localStorage.getItem("todo-tab") || "todo"; } catch (e) {} setTab(t); })();
+
   function showMail(on) {
     $("mail").hidden = !on;
+    $("tabs").hidden = !on;
+    document.body.classList.toggle("tabbed", on);
     $("grid").classList.toggle("has-mail", on);
     document.querySelector(".wrap").classList.toggle("wide", on);
   }
@@ -545,6 +622,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       list.appendChild(a);
     });
     empty.hidden = items.length > 0;
+    var need = items.filter(function (m) { return m.status === "Needs reply"; }).length;
+    $("tab-mail-n").textContent = need ? need : "";
     empty.textContent = mailMeta ? "No active Chasyn email in the last two weeks." : "Email updates aren't connected yet. They'll appear here once the email sync is running.";
   }
   function startMail() {
