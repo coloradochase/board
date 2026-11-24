@@ -192,8 +192,14 @@ h1 { font-family: var(--display); font-weight: 700; font-size: 32px; letter-spac
 .item.completing .title { text-decoration: line-through; text-decoration-color: var(--accent); color: var(--muted); }
 .item.swipe { transform: translateX(45%); opacity: 0; transition: transform .24s cubic-bezier(.55, 0, .8, .2), opacity .22s ease-in; }
 .item.collapse { overflow: hidden; transition: height .16s ease, padding .16s ease, border-width .16s ease; padding-top: 0 !important; padding-bottom: 0 !important; border-bottom-width: 0 !important; }
+/* Deleting: a quick red flash, then the row slides off to the left */
+.item.removing-start { background: var(--urgent-bg); transition: background-color .1s ease; }
+.item.removing { transform: translateX(-45%); opacity: 0; transition: transform .24s cubic-bezier(.55, 0, .8, .2), opacity .22s ease-in, background-color .1s ease; }
+/* Adding: the row opens up, slides in with a small overshoot and a soft highlight */
+.item.entering { overflow: hidden; opacity: 0; transform: translateX(-28px); background: var(--accent-soft); transition: height .18s ease, opacity .2s ease .07s, transform .32s cubic-bezier(.2, .9, .3, 1.35) .07s, background-color .5s ease .3s; }
+.item.entering.entered { opacity: 1; transform: none; background: transparent; }
 @keyframes chk-pop { 0% { transform: scale(1); } 45% { transform: scale(1.35); } 100% { transform: scale(1); } }
-@media (prefers-reduced-motion: reduce) { .item.completing .check { animation: none; } .item.swipe, .item.collapse { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .item.completing .check { animation: none; } .item.swipe, .item.collapse, .item.removing, .item.entering { transition: none; } }
 .theme-switch { position: relative; flex: none; width: 52px; height: 28px; border-radius: 999px; border: 1px solid var(--line); background: var(--sheet); cursor: pointer; padding: 0; }
 .theme-switch:hover { border-color: var(--muted); }
 .theme-switch svg { position: absolute; top: 6px; width: 14px; height: 14px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -842,12 +848,51 @@ a.ev:hover { background: var(--bg); }
     render();
     return col.doc(id).update(toFs(patch)).catch(denied);
   }
+  function rowOf(id) { return document.querySelector('.item[data-id="' + id + '"]'); }
+  function calm() { return matchMedia("(prefers-reduced-motion: reduce)").matches; }
+  function animateIn(id) {   // open the gap, slide the row in
+    var li = rowOf(id); if (!li || calm() || li.offsetParent === null) return;
+    var h = li.offsetHeight;
+    animating++;
+    li.classList.add("entering"); li.style.height = "0px"; li.offsetHeight;
+    li.style.height = h + "px"; li.classList.add("entered");
+    setTimeout(function () { li.classList.remove("entering", "entered"); li.style.height = ""; animating--; render(); }, 440);
+  }
+  function animateOut(id, kind, then) {   // kind "remove": red flash + slide left; "complete": pop + slide right
+    var li = rowOf(id);
+    if (!li || calm() || li.offsetParent === null) { then(); return; }
+    animating++;
+    var steps = kind === "remove"
+      ? [["removing-start", 0], ["removing", 110], [null, 350], [false, 510]]
+      : [["completing", 0], ["swipe", 150], [null, 390], [false, 560]];
+    steps.forEach(function (st) {
+      setTimeout(function () {
+        if (st[0] === null) { li.style.height = li.offsetHeight + "px"; li.offsetHeight; li.classList.add("collapse"); li.style.height = "0px"; }
+        else if (st[0] === false) { animating--; then(); }
+        else li.classList.add(st[0]);
+      }, st[1]);
+    });
+  }
   function runOp(op) {
-    if (op.type === "update") return applyUpdate(op.id, op.patch);
-    if (op.type === "delete") { tasks = tasks.filter(function (x) { return x.id !== op.id; }); render(); return col.doc(op.id).delete().catch(denied); }
+    if (op.type === "update") {
+      var t = find(op.id);
+      if (op.patch.done === true && t && !t.done) { animateOut(op.id, "complete", function () { applyUpdate(op.id, op.patch); }); return; }
+      var reopening = op.patch.done === false && t && t.done;
+      var r = applyUpdate(op.id, op.patch);
+      if (reopening) animateIn(op.id);
+      return r;
+    }
+    if (op.type === "delete") {
+      animateOut(op.id, "remove", function () {
+        tasks = tasks.filter(function (x) { return x.id !== op.id; }); render();
+        col.doc(op.id).delete().catch(denied);
+      });
+      return;
+    }
     if (op.type === "create") {
       if (!find(op.id)) tasks.push(Object.assign({ id: op.id }, op.data));
-      render(); return col.doc(op.id).set(op.data).catch(denied);
+      render(); animateIn(op.id);
+      return col.doc(op.id).set(op.data).catch(denied);
     }
   }
   function remember(entry) {
@@ -963,13 +1008,7 @@ a.ev:hover { background: var(--bg); }
   var animating = 0;
   function completeTask(li, id) {   // pop, swipe away, close the gap, then save
     if (li.classList.contains("completing")) return;
-    var fast = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (fast) { write(id, { done: true, doneAt: Date.now() }); return; }
-    animating++;
-    li.classList.add("completing");
-    setTimeout(function () { li.classList.add("swipe"); }, 150);
-    setTimeout(function () { li.style.height = li.offsetHeight + "px"; li.offsetHeight; li.classList.add("collapse"); li.style.height = "0px"; }, 390);
-    setTimeout(function () { animating--; write(id, { done: true, doneAt: Date.now() }); }, 560);
+    animateOut(id, "complete", function () { write(id, { done: true, doneAt: Date.now() }); });
   }
   function onClick(e) {
     var li = e.target.closest(".item"); if (!li || !canEdit) return;
