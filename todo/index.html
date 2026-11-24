@@ -523,8 +523,12 @@ body:not([data-tab="calendar"]) .cal { display: none; }
 .ev-day { padding: 10px 16px 4px; font: 600 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-top: 1px solid var(--line); }
 .ev-day:first-child { border-top: 0; }
 .ev-day.is-today { color: var(--accent); }
-.ev { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 10px; padding: 8px 16px; color: var(--ink); text-decoration: none; }
+.ev { display: grid; grid-template-columns: 74px minmax(0, 1fr) auto; gap: 10px; padding: 8px 16px; color: var(--ink); text-decoration: none; }
 a.ev:hover { background: var(--bg); }
+.ev-map { align-self: center; font: 600 11.5px var(--body); color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s, border-color .15s; }
+.ev-map:hover { border-color: var(--accent); }
+.ev-map.on { background: var(--accent); border-color: var(--accent); color: var(--sheet); }
+.ev-map:disabled { opacity: .6; cursor: default; }
 .ev-time { font: 500 12.5px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 2px; }
 .ev-title { font-weight: 500; font-size: 14.5px; line-height: 1.4; overflow-wrap: anywhere; }
 .ev-sub { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 3px; font-size: 12.5px; color: var(--muted); }
@@ -624,7 +628,7 @@ a.ev:hover { background: var(--bg); }
   .chip-ev.c-email { padding: 0 1px; }
   .chip-more { font-size: 8.5px; padding: 0 2px; }
   .cal-days, .cal-dow { gap: 3px; }
-  .ev { grid-template-columns: 64px minmax(0, 1fr); }
+  .ev { grid-template-columns: 64px minmax(0, 1fr) auto; }
   body.tabbed[data-tab="mail"] .col { display: none; }
   body.tabbed[data-tab="todo"] .mail { display: none; }
   .mail-card { padding: 16px 14px; }
@@ -1956,6 +1960,7 @@ a.ev:hover { background: var(--bg); }
       roadItems = snap.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); });
       roadOK = true; updateTabs();
       if ($("road-pop").hidden) renderRoad();   // don't redraw under an open form
+      if (calOK) renderCal();   // the calendar list shows which events are on the roadmap
     }, function () { stopRoad(); });   // not on the team list: no Roadmap tab
   }
   function stopRoad() {
@@ -1982,6 +1987,28 @@ a.ev:hover { background: var(--bg); }
     var d = parseYmd(s), today = ymd(new Date()), tmr = addDays(today, 1);
     var base = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
     return s === today ? "Today · " + base : s === tmr ? "Tomorrow · " + base : base;
+  }
+  // Add or remove a calendar event on the Roadmap. The milestone's id comes from the event's, so they stay linked.
+  function mapBtn(e) {
+    var rid = ("ev_" + e.id).replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 120);
+    var on = (roadItems || []).some(function (r) { return r.id === rid; });
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "ev-map" + (on ? " on" : "");
+    b.textContent = on ? "✓ Roadmap" : "+ Roadmap";
+    b.title = on ? "On the roadmap. Tap to remove it." : "Add to the roadmap";
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.addEventListener("click", function (ev) {
+      ev.preventDefault(); ev.stopPropagation();   // email rows are links; don't open the email
+      b.disabled = true;
+      var ref = col.firestore.collection("roadmap").doc(rid), p;
+      if (on) p = ref.delete();
+      else {
+        var notes = [e.time ? fmtTime(e.time) : "", e.location].filter(Boolean).join(" · ");
+        p = ref.set({ title: (e.title || "Event").slice(0, 120), date: e.date, notes: notes.slice(0, 1000), createdAt: Date.now(), updatedAt: Date.now() });
+      }
+      p.catch(function (err) { b.disabled = false; denied(err); });
+    });
+    return b;
   }
   function allEvents() {
     var out = [];
@@ -2052,6 +2079,7 @@ a.ev:hover { background: var(--bg); }
       if (e.location) extra.push(e.location);
       if (extra.length) { var x = document.createElement("span"); x.textContent = extra.join(" · "); sub.appendChild(x); }
       body.appendChild(sub); row.appendChild(body);
+      if (roadOK && canEdit) row.appendChild(mapBtn(e));
       box.appendChild(row);
     });
     $("cal-empty").hidden = shown.length > 0;
