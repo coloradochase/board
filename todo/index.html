@@ -352,11 +352,18 @@ body:not([data-tab="roadmap"]) .road { display: none; }
 .rd-pin { cursor: pointer; }
 .rd-pin .dot { fill: var(--accent); stroke: var(--sheet); stroke-width: 3; transition: r .12s ease; }
 .rd-pin:hover .dot, .rd-pin.sel .dot { r: 11; }
-.rd-pin .stem { stroke: var(--accent); stroke-width: 1.5; opacity: .6; }
-.rd-pin .lbl { font: 600 13px var(--body); fill: var(--ink); }
-.rd-pin .sub { font: 500 10.5px var(--mono); fill: var(--muted); }
+.rd-stems .stem { stroke: var(--accent); stroke-width: 1.5; opacity: .8; }
+.rd-stems .stem.past { stroke: var(--muted); opacity: .6; }
+.rd-pin foreignObject { overflow: visible; }
+.rd-card-wrap { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+.rd-card { box-sizing: border-box; padding: 6px 9px 6px; background: var(--sheet); border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.08); font-family: var(--body); color: var(--ink); text-align: left; transition: transform .12s ease, box-shadow .12s ease; }
+.rd-pin:hover .rd-card, .rd-pin.sel .rd-card { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.14); }
+.rd-ct { font-weight: 600; line-height: 1.22; overflow-wrap: anywhere; }
+.rd-cd { font: 500 10.5px var(--mono); color: var(--muted); margin-top: 3px; letter-spacing: .03em; }
+.rd-cn { font-size: 10.5px; line-height: 1.3; color: var(--muted); margin-top: 3px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .rd-pin.past .dot { fill: var(--muted); }
-.rd-pin.past .lbl { fill: var(--muted); }
+.rd-pin.past .rd-card { border-top-color: var(--muted); }
+.rd-pin.past .rd-ct { color: var(--muted); }
 .road-pop { position: absolute; z-index: 5; width: 250px; box-sizing: border-box; display: flex; flex-direction: column; gap: 7px; padding: 10px 12px 12px; background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.18); animation: toast-in .14s ease-out; }
 .road-pop-head { display: flex; justify-content: space-between; align-items: center; font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .road-x { border: 0; background: none; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 2px; }
@@ -704,7 +711,7 @@ a.ev:hover { background: var(--bg); }
       </div>
       <div class="road-scroll">
         <div class="road-stage" id="road-stage">
-          <svg id="road-svg" viewBox="0 0 1000 600" role="img" aria-label="Roadmap of the year"></svg>
+          <svg id="road-svg" viewBox="0 0 1000 730" role="img" aria-label="Roadmap of the year"></svg>
           <form class="road-pop" id="road-pop" hidden novalidate>
             <div class="road-pop-head"><span id="road-pop-title">New milestone</span><button type="button" class="road-x" id="road-pop-x" aria-label="Close">×</button></div>
             <input id="rm-title" type="text" maxlength="120" placeholder="Milestone" aria-label="Milestone" autocomplete="off">
@@ -1605,7 +1612,7 @@ a.ev:hover { background: var(--bg); }
     songsUnsub = null; songs = null; musicOK = false; updateTabs();
   }
   // ---------- roadmap (team only): the year as an S-shaped road, four months per row ----------
-  var RD = { X0: 110, X1: 890, ROWS: [110, 300, 490], R: 95 };
+  var RD = { X0: 110, X1: 890, ROWS: [190, 430, 670], R: 120 };
   RD.W = (RD.X1 - RD.X0) / 4;
   var MONTHS_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   var MON3 = MONTHS_LONG.map(function (m) { return m.slice(0, 3).toUpperCase(); });
@@ -1670,30 +1677,37 @@ a.ev:hover { background: var(--bg); }
     }
     var st = sv("text", { x: RD.X0 - 14, y: RD.ROWS[0] + 4, class: "rd-end", "text-anchor": "end" }, svg); st.textContent = "START";
     var en = sv("text", { x: RD.X1 + 14, y: RD.ROWS[2] + 4, class: "rd-end" }, svg); en.textContent = roadYear + 1 + " →";
-    // milestones, with labels placed above or below so they don't overlap
+    // milestones: a card above each one with the full text, and a line down to its date
     var items = (roadItems || []).filter(function (it) { return String(it.date).slice(0, 4) === String(roadYear); })
       .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
-    var placed = [];
+    var placed = [], stems = sv("g", { class: "rd-stems" }, svg);
     items.forEach(function (it) {
       var pt = datePoint(it.date), row = Math.floor(pt.m / 4);
-      var title = (it.title || "").length > 24 ? it.title.slice(0, 23) + "…" : (it.title || "");
-      var w = Math.max(title.length * 7.2, 46) + 8, x0 = pt.x - w / 2, x1 = pt.x + w / 2, spot = null;
-      for (var lvl = 0; lvl < 4 && !spot; lvl++) {
-        ["up", "down"].forEach(function (side) {
-          if (spot) return;
-          var clash = placed.some(function (q) { return q.row === row && q.side === side && q.lvl === lvl && !(x1 < q.x0 || x0 > q.x1); });
-          if (!clash) spot = { side: side, lvl: lvl };
-        });
+      var title = it.title || "", notes = it.notes || "";
+      var n = title.length;
+      var fs = n > 90 ? 10.5 : n > 50 ? 11.5 : n > 24 ? 13 : 14.5;   // smaller type for longer names
+      var w = n > 90 ? 210 : n > 50 ? 190 : Math.max(96, Math.min(160, Math.max(n * fs * 0.56, notes ? 120 : 0) + 22));
+      var lines = Math.max(1, Math.ceil(n * fs * 0.56 / (w - 18)));
+      var nfs = 10.5, nlines = notes ? Math.ceil(notes.length * nfs * 0.55 / (w - 18)) : 0;
+      var h = 12 + lines * fs * 1.22 + 14 + nlines * nfs * 1.3;
+      var bx = Math.max(8, Math.min(992 - w, pt.x - w / 2)), bottom = pt.y - 28;
+      for (var guard = 0; guard < 20; guard++) {   // stack upward past any card it would cover
+        var hit = placed.filter(function (q) { return q.row === row && bx < q.x + q.w + 6 && bx + w + 6 > q.x && bottom > q.top - 6 && bottom - h < q.bottom + 6; })[0];
+        if (!hit) break;
+        bottom = hit.top - 8;
       }
-      spot = spot || { side: "up", lvl: 0 };
-      placed.push({ row: row, side: spot.side, lvl: spot.lvl, x0: x0, x1: x1 });
-      var ly = spot.side === "up" ? pt.y - 40 - spot.lvl * 34 : pt.y + 44 + spot.lvl * 34;
-      var g = sv("g", { class: "rd-pin" + (it.date < today ? " past" : "") + (roadEditing === it.id ? " sel" : ""), "data-id": it.id, tabindex: "0", role: "button", "aria-label": it.title + ", " + fmtShort(it.date) }, svg);
-      sv("line", { x1: pt.x, y1: pt.y, x2: pt.x, y2: spot.side === "up" ? ly + 6 : ly - 14, class: "stem" }, g);
-      var t1 = sv("text", { x: pt.x, y: ly, class: "lbl", "text-anchor": "middle" }, g); t1.textContent = title;
-      var t2 = sv("text", { x: pt.x, y: spot.side === "up" ? ly - 15 : ly + 14, class: "sub", "text-anchor": "middle" }, g); t2.textContent = fmtShort(it.date);
+      placed.push({ row: row, x: bx, w: w, top: bottom - h, bottom: bottom });
+      var g = sv("g", { class: "rd-pin" + (it.date < today ? " past" : "") + (roadEditing === it.id ? " sel" : ""), "data-id": it.id, tabindex: "0", role: "button", "aria-label": title + ", " + fmtShort(it.date) }, svg);
+      sv("line", { x1: pt.x, y1: pt.y - 9, x2: pt.x, y2: bottom, class: "stem" + (it.date < today ? " past" : "") }, stems);   // lines sit behind every card
+      var fo = sv("foreignObject", { x: bx, y: bottom - h - 60, width: w, height: h + 60 }, g);
+      var wrap = document.createElement("div"); wrap.className = "rd-card-wrap";
+      var card = document.createElement("div"); card.className = "rd-card";
+      var t1 = document.createElement("div"); t1.className = "rd-ct"; t1.style.fontSize = fs + "px"; t1.textContent = title;
+      var t2 = document.createElement("div"); t2.className = "rd-cd"; t2.textContent = fmtShort(it.date);
+      card.appendChild(t1); card.appendChild(t2);
+      if (notes) { var t3 = document.createElement("div"); t3.className = "rd-cn"; t3.textContent = notes; card.appendChild(t3); }
+      wrap.appendChild(card); fo.appendChild(wrap);
       sv("circle", { cx: pt.x, cy: pt.y, r: 8, class: "dot" }, g);
-      var tip = sv("title", {}, g); tip.textContent = it.title + " · " + fmtShort(it.date) + (it.notes ? "\n" + it.notes : "");
     });
     // today
     if (roadYear === thisYear) {
