@@ -1616,7 +1616,7 @@ a.ev:hover { background: var(--bg); }
   RD.W = (RD.X1 - RD.X0) / 4;
   var MONTHS_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   var MON3 = MONTHS_LONG.map(function (m) { return m.slice(0, 3).toUpperCase(); });
-  var roadCentered = false, roadItems = null, roadUnsub = null, roadYear = new Date().getFullYear(), roadEditing = null, roadHoverM = -1;
+  var roadCentered = false, roadItems = null, roadUnsub = null, roadYear = Math.max(2027, new Date().getFullYear()), roadEditing = null, roadHoverM = -1;
   var SVGNS = "http://www.w3.org/2000/svg";
   function sv(tag, attrs, parent) {
     var el = document.createElementNS(SVGNS, tag);
