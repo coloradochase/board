@@ -179,6 +179,21 @@ h1 { font-family: var(--display); font-weight: 700; font-size: 32px; letter-spac
 .count { font-family: var(--mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .meta-row { display: flex; align-items: center; gap: 12px; }
 /* Light/dark switch */
+.hist { display: inline-flex; gap: 6px; }
+.hist-btn { width: 30px; height: 28px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 999px; background: var(--sheet); color: var(--ink); cursor: pointer; }
+.hist-btn:hover:not(:disabled) { border-color: var(--muted); }
+.hist-btn:disabled { opacity: .35; cursor: default; }
+.hist-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.hist-toast { position: fixed; z-index: 60; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%); max-width: calc(100% - 32px); box-sizing: border-box; padding: 9px 16px; border-radius: 999px; background: var(--ink); color: var(--sheet); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 6px 24px rgba(0,0,0,.25); pointer-events: none; animation: toast-in .16s ease-out; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+/* Checking off a task: the box pops, the row swipes away, then the gap closes */
+.item.completing .check { background: var(--accent); border-color: var(--accent); animation: chk-pop .2s ease-out; }
+.item.completing .check svg { opacity: 1; }
+.item.completing .title { text-decoration: line-through; text-decoration-color: var(--accent); color: var(--muted); }
+.item.swipe { transform: translateX(45%); opacity: 0; transition: transform .24s cubic-bezier(.55, 0, .8, .2), opacity .22s ease-in; }
+.item.collapse { overflow: hidden; transition: height .16s ease, padding .16s ease, border-width .16s ease; padding-top: 0 !important; padding-bottom: 0 !important; border-bottom-width: 0 !important; }
+@keyframes chk-pop { 0% { transform: scale(1); } 45% { transform: scale(1.35); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .item.completing .check { animation: none; } .item.swipe, .item.collapse { transition: none; } }
 .theme-switch { position: relative; flex: none; width: 52px; height: 28px; border-radius: 999px; border: 1px solid var(--line); background: var(--sheet); cursor: pointer; padding: 0; }
 .theme-switch:hover { border-color: var(--muted); }
 .theme-switch svg { position: absolute; top: 6px; width: 14px; height: 14px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -504,6 +519,10 @@ a.ev:hover { background: var(--bg); }
     <div class="meta">
       <div class="meta-row">
         <div class="count" id="count"><b>0</b> open · 0 done</div>
+        <div class="hist" id="hist" hidden>
+          <button class="hist-btn" id="undo-btn" type="button" aria-label="Undo" title="Undo (⌘Z)" disabled><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 3.5 2.5 6.5l3 3"/><path d="M2.8 6.5H10a3.5 3.5 0 0 1 0 7H7"/></svg></button>
+          <button class="hist-btn" id="redo-btn" type="button" aria-label="Redo" title="Redo (⌘⇧Z)" disabled><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m10.5 3.5 3 3-3 3"/><path d="M13.2 6.5H6a3.5 3.5 0 0 0 0 7h3"/></svg></button>
+        </div>
         <button class="theme-switch" id="theme-switch" type="button" role="switch" aria-checked="false" aria-label="Dark mode" title="Light / dark">
           <svg class="sun" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg>
           <svg class="moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 9.6A5.6 5.6 0 0 1 6.4 2.5a5.6 5.6 0 1 0 7.1 7.1z"/></svg>
@@ -613,6 +632,7 @@ a.ev:hover { background: var(--bg); }
   </section>
 
   <div class="status" id="status">Loading the list…</div>
+  <div class="hist-toast" id="hist-toast" role="status" aria-live="polite" hidden></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -682,6 +702,7 @@ a.ev:hover { background: var(--bg); }
     row.querySelector(".title").value = t.title || "";
     if (row.querySelector(".note")) row.querySelector(".note").value = t.notes || "";
     if (confirming === t.id) {
+      row.querySelector(".note-cell").classList.remove("no-note");   // the confirm lives in the note area, which phones hide when empty
       row.querySelector(".note-cell").innerHTML = '<div class="confirm"><span>Delete this task?</span><button class="yes" type="button">Delete</button><button class="no" type="button">Keep</button></div>';
     } else {
       row.querySelector(".tools").innerHTML = '<button class="icon-btn note-btn" type="button" aria-label="Add a note">' + NOTE + '</button>' +
@@ -729,7 +750,7 @@ a.ev:hover { background: var(--bg); }
     setTimeout(function () { p.classList.remove("petted"); }, 520);
   });
   function render() {
-    if (dragging) return;
+    if (dragging || animating) return;
     var active = document.activeElement, keep = null;
     if (active && active.closest && active.closest(".item")) {
       keep = { id: active.closest(".item").dataset.id, cls: active.className.split(" ")[0], start: active.selectionStart, end: active.selectionEnd, value: active.value };
@@ -785,6 +806,7 @@ a.ev:hover { background: var(--bg); }
   function setEditMode() {
     document.body.classList.toggle("readonly", !canEdit);
     $("adder").hidden = !canEdit;
+    if (typeof paintHist === "function" && undoStack) paintHist();
     $("signin").hidden = !!user;
     var who = $("who");
     if (user) {
@@ -806,11 +828,82 @@ a.ev:hover { background: var(--bg); }
       setStatus((user ? user.email : "This account") + " isn't on the team list yet. Ask Chase to add it, then reload.", true);
     } else setStatus("Couldn't save that change. Check your connection and try again.", true);
   }
-  function write(id, patch) {
-    var t = find(id); if (t) Object.assign(t, patch);
-    render();
-    return col.doc(id).update(patch).catch(denied);
+  // ---------- changes, with undo / redo (this device, this session) ----------
+  var DEL = { del: true };   // "remove this field"
+  var undoStack = [], redoStack = [];
+  function toFs(patch) {
+    var o = {}; Object.keys(patch).forEach(function (k) { o[k] = patch[k] === DEL ? firebase.firestore.FieldValue.delete() : patch[k]; });
+    return o;
   }
+  function applyUpdate(id, patch) {
+    var t = find(id); if (!t) return Promise.resolve();
+    Object.keys(patch).forEach(function (k) { if (patch[k] === DEL) delete t[k]; else t[k] = patch[k]; });
+    if ("notes" in patch) savedNotes[id] = patch.notes === DEL ? "" : patch.notes;
+    render();
+    return col.doc(id).update(toFs(patch)).catch(denied);
+  }
+  function runOp(op) {
+    if (op.type === "update") return applyUpdate(op.id, op.patch);
+    if (op.type === "delete") { tasks = tasks.filter(function (x) { return x.id !== op.id; }); render(); return col.doc(op.id).delete().catch(denied); }
+    if (op.type === "create") {
+      if (!find(op.id)) tasks.push(Object.assign({ id: op.id }, op.data));
+      render(); return col.doc(op.id).set(op.data).catch(denied);
+    }
+  }
+  function remember(entry) {
+    undoStack.push(entry); if (undoStack.length > 50) undoStack.shift();
+    redoStack = []; paintHist();
+  }
+  function describe(patch, t) {
+    var name = "“" + ((t && t.title) || "task").slice(0, 40) + "”";
+    if ("done" in patch) return (patch.done ? "complete " : "reopen ") + name;
+    if ("title" in patch) return "rename " + name;
+    if ("assignee" in patch) return (patch.assignee === DEL ? "unassign " : "assign ") + name;
+    if ("priority" in patch) return (patch.priority === DEL ? "unflag " : "flag ") + name;
+    if ("notes" in patch) return "note on " + name;
+    if ("order" in patch) return "move " + name;
+    return "change " + name;
+  }
+  function write(id, patch) {   // every task edit goes through here so it can be undone
+    var t = find(id); if (!t) return Promise.resolve();
+    var before = {};
+    Object.keys(patch).forEach(function (k) { before[k] = (k in t && t[k] !== undefined) ? t[k] : DEL; });
+    remember({ label: describe(patch, t), undo: { type: "update", id: id, patch: before }, redo: { type: "update", id: id, patch: patch } });
+    return applyUpdate(id, patch);
+  }
+  function taskData(t) { var d = {}; Object.keys(t).forEach(function (k) { if (k !== "id") d[k] = t[k]; }); return d; }
+  var toastTimer = 0;
+  function toast(msg) {
+    var el = $("hist-toast"); el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.hidden = true; }, 1800);
+  }
+  function undo() {
+    if (!canEdit || !undoStack.length) return;
+    var e = undoStack.pop(); redoStack.push(e); paintHist();
+    runOp(e.undo); toast("Undid: " + e.label);
+  }
+  function redo() {
+    if (!canEdit || !redoStack.length) return;
+    var e = redoStack.pop(); undoStack.push(e); paintHist();
+    runOp(e.redo); toast("Redid: " + e.label);
+  }
+  function paintHist() {
+    $("hist").hidden = !canEdit;
+    var u = $("undo-btn"), r = $("redo-btn");
+    u.disabled = !undoStack.length; r.disabled = !redoStack.length;
+    u.title = undoStack.length ? "Undo " + undoStack[undoStack.length - 1].label + " (⌘Z)" : "Nothing to undo";
+    r.title = redoStack.length ? "Redo " + redoStack[redoStack.length - 1].label + " (⌘⇧Z)" : "Nothing to redo";
+  }
+  $("undo-btn").addEventListener("click", undo);
+  $("redo-btn").addEventListener("click", redo);
+  document.addEventListener("keydown", function (e) {
+    if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+    var k = e.key.toLowerCase(); if (k !== "z" && k !== "y") return;
+    var el = e.target;   // inside a text box, let the box undo its own typing
+    if (el && (el.tagName === "TEXTAREA" || el.tagName === "INPUT" || el.isContentEditable)) return;
+    e.preventDefault();
+    if (k === "y" || e.shiftKey) redo(); else undo();
+  });
 
   // ---------- actions ----------
   $("signin-btn").addEventListener("click", function () {
@@ -826,10 +919,11 @@ a.ev:hover { background: var(--bg); }
     var input = $("new-task"), v = input.value.trim();
     if (!v || !canEdit) return;
     var open = sorted().open;
-    var t = { title: v, done: false, order: open.length ? (open[0].order || 0) - 1000 : 1000, notes: "", createdAt: Date.now() };   // new tasks go on top
+    var last = open.reduce(function (m, x) { return Math.max(m, x.order || 0); }, 0);
+    var t = { title: v, done: false, order: open.length ? last + 1000 : 1000, notes: "", createdAt: Date.now() };   // new tasks go on the bottom
     var ref = col.doc();
-    tasks.push(Object.assign({ id: ref.id }, t)); render();
-    ref.set(t).catch(denied);
+    remember({ label: "add “" + v.slice(0, 40) + "”", undo: { type: "delete", id: ref.id }, redo: { type: "create", id: ref.id, data: t } });
+    runOp({ type: "create", id: ref.id, data: t });
     input.value = "";
   });
 
@@ -850,22 +944,33 @@ a.ev:hover { background: var(--bg); }
     render();
   });
 
+  var animating = 0;
+  function completeTask(li, id) {   // pop, swipe away, close the gap, then save
+    if (li.classList.contains("completing")) return;
+    var fast = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (fast) { write(id, { done: true, doneAt: Date.now() }); return; }
+    animating++;
+    li.classList.add("completing");
+    setTimeout(function () { li.classList.add("swipe"); }, 150);
+    setTimeout(function () { li.style.height = li.offsetHeight + "px"; li.offsetHeight; li.classList.add("collapse"); li.style.height = "0px"; }, 390);
+    setTimeout(function () { animating--; write(id, { done: true, doneAt: Date.now() }); }, 560);
+  }
   function onClick(e) {
     var li = e.target.closest(".item"); if (!li || !canEdit) return;
     var id = li.dataset.id, t = find(id); if (!t) return;
     if (e.target.closest(".check")) {
       if (t.done) {
         var open = sorted().open;
-        write(id, { done: false, doneAt: firebase.firestore.FieldValue.delete(), order: open.length ? (open[open.length - 1].order || 0) + 1000 : 1000 });
-        delete t.doneAt;
-      } else write(id, { done: true, doneAt: Date.now() });
+        write(id, { done: false, doneAt: DEL, order: open.length ? (open[open.length - 1].order || 0) + 1000 : 1000 });
+      } else completeTask(li, id);
     } else if (e.target.closest(".note-btn")) {
       notingId = id; render();
       var ta = document.getElementById("note-" + id); if (ta) { ta.focus(); grow(ta); }
     } else if (e.target.closest(".del")) { confirming = id; render(); }
     else if (e.target.closest(".yes")) {
-      confirming = null; tasks = tasks.filter(function (x) { return x.id !== id; }); render();
-      col.doc(id).delete().catch(denied);
+      confirming = null;
+      remember({ label: "delete “" + (t.title || "task").slice(0, 40) + "”", undo: { type: "create", id: id, data: taskData(t) }, redo: { type: "delete", id: id } });
+      runOp({ type: "delete", id: id });
     }
     else if (e.target.closest(".no")) { confirming = null; render(); }
   }
@@ -889,7 +994,9 @@ a.ev:hover { background: var(--bg); }
     var run = function () {
       var v = ta.value;
       if (savedNotes[id] === v) return;
+      var prev = savedNotes[id];
       savedNotes[id] = v;
+      remember({ label: describe({ notes: v }, find(id)), undo: { type: "update", id: id, patch: { notes: prev } }, redo: { type: "update", id: id, patch: { notes: v } } });
       col.doc(id).update({ notes: v }).catch(denied);
     };
     if (now) run(); else noteTimers[id] = setTimeout(run, 700);
@@ -902,7 +1009,7 @@ a.ev:hover { background: var(--bg); }
       var li = sel.closest(".item"), t = li && find(li.dataset.id); if (!t || !canEdit) return;
       var v = sel.value; sel.blur();
       if (PEOPLE.indexOf(v) >= 0) write(t.id, { assignee: v });
-      else { delete t.assignee; render(); col.doc(t.id).update({ assignee: firebase.firestore.FieldValue.delete() }).catch(denied); }
+      else write(t.id, { assignee: DEL });
     });
     list.addEventListener("focusout", function (e) {
       if (e.target.classList.contains("title")) saveTitle(e.target);
@@ -922,7 +1029,7 @@ a.ev:hover { background: var(--bg); }
       var b = e.target.closest(".prio"); if (!b) return;
       var li = b.closest(".item"), t = li && find(li.dataset.id); if (!t || !canEdit) return;
       if (t.priority !== "urgent") write(t.id, { priority: "urgent" });
-      else { delete t.priority; render(); col.doc(t.id).update({ priority: firebase.firestore.FieldValue.delete() }).catch(denied); }
+      else write(t.id, { priority: DEL });
       var nb = document.querySelector('.item[data-id="' + t.id + '"] .prio'); if (nb && e.detail === 0) nb.focus();   // keep keyboard focus
     });
     list.addEventListener("input", function (e) {
