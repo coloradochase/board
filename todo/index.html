@@ -322,6 +322,60 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 body.tabbed[data-tab="music"] .grid { display: none; }
 body:not([data-tab="music"]) .music { display: none; }
 body.tabbed[data-tab="calendar"] .grid { display: none; }
+body.tabbed[data-tab="roadmap"] .grid { display: none; }
+body:not([data-tab="roadmap"]) .road { display: none; }
+/* Roadmap: an S-shaped road through the year, four months per row */
+.road { display: flex; flex-direction: column; gap: 20px; }
+.road-sheet { padding: 14px 14px 10px; }
+.road-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.road-head h2 { margin: 0 4px; font: 700 22px var(--display); font-variant-numeric: tabular-nums; }
+.road-hint { margin-left: auto; font: 11px var(--mono); letter-spacing: .04em; color: var(--muted); }
+.road-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.road-stage { position: relative; min-width: 720px; }
+#road-svg { display: block; width: 100%; height: auto; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.rd-base { fill: none; stroke: var(--line); stroke-width: 26; stroke-linecap: round; stroke-linejoin: round; }
+.rd-lane { fill: none; stroke: var(--sheet); stroke-width: 2; stroke-dasharray: 10 12; stroke-linecap: round; opacity: .9; }
+.rd-past { fill: none; stroke: var(--accent); stroke-width: 26; stroke-linecap: round; opacity: .28; }
+.rd-month { fill: none; stroke: var(--accent); stroke-width: 26; stroke-linecap: butt; opacity: 0; transition: opacity .15s ease; }
+.rd-month.on { opacity: 1; }
+.rd-tick { stroke: var(--sheet); stroke-width: 3; }
+.rd-mini { font: 500 11px var(--mono); fill: var(--muted); text-anchor: middle; letter-spacing: .08em; opacity: .6; pointer-events: none; }
+.rd-mini.on { font-weight: 700; font-size: 12.5px; letter-spacing: .16em; fill: var(--sheet); opacity: 1; }
+.rd-end { font: 500 11px var(--mono); fill: var(--muted); letter-spacing: .1em; }
+.rd-today circle { fill: var(--ink); }
+.rd-today text { font: 600 11px var(--mono); fill: var(--ink); text-anchor: middle; letter-spacing: .06em; }
+.rd-plus { cursor: pointer; }
+.rd-plus circle { fill: var(--ink); }
+.rd-plus path { stroke: var(--sheet); stroke-width: 3; stroke-linecap: round; }
+.rd-plus .rd-pdate { font: 600 12px var(--mono); fill: var(--ink); text-anchor: middle; }
+.rd-plus .rd-pbg { fill: var(--sheet); stroke: var(--line); }
+.rd-pin { cursor: pointer; }
+.rd-pin .dot { fill: var(--accent); stroke: var(--sheet); stroke-width: 3; transition: r .12s ease; }
+.rd-pin:hover .dot, .rd-pin.sel .dot { r: 11; }
+.rd-pin .stem { stroke: var(--accent); stroke-width: 1.5; opacity: .6; }
+.rd-pin .lbl { font: 600 13px var(--body); fill: var(--ink); }
+.rd-pin .sub { font: 500 10.5px var(--mono); fill: var(--muted); }
+.rd-pin.past .dot { fill: var(--muted); }
+.rd-pin.past .lbl { fill: var(--muted); }
+.road-pop { position: absolute; z-index: 5; width: 250px; box-sizing: border-box; display: flex; flex-direction: column; gap: 7px; padding: 10px 12px 12px; background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.18); animation: toast-in .14s ease-out; }
+.road-pop-head { display: flex; justify-content: space-between; align-items: center; font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.road-x { border: 0; background: none; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 2px; }
+.road-pop input, .road-pop textarea { font: 15px var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; box-sizing: border-box; width: 100%; min-height: 36px; -webkit-appearance: none; appearance: none; resize: vertical; }
+.road-pop input:focus, .road-pop textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+#rm-title { font-weight: 600; }
+.road-pop-btns { display: flex; align-items: center; gap: 8px; }
+.road-pop-btns span { flex: 1; }
+.road-pop .ev-save { font: 600 13px var(--body); border-radius: 999px; padding: 7px 16px; cursor: pointer; }
+.road-del { font: 600 13px var(--body); border: 0; border-radius: 999px; padding: 7px 12px; background: transparent; color: var(--danger); cursor: pointer; }
+.road-list { list-style: none; margin: 0; padding: 0; }
+.road-list li { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; padding: 9px 16px; border-top: 1px solid var(--line); cursor: pointer; }
+.road-list li:first-child { border-top: 0; }
+.road-list li:hover { background: var(--bg); }
+.road-list li.past { opacity: .55; }
+.road-list .d { font: 500 12.5px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 2px; }
+.road-list .t { font-weight: 500; font-size: 14.5px; overflow-wrap: anywhere; }
+.road-list .n { font-size: 12.5px; color: var(--muted); margin-top: 2px; white-space: pre-wrap; }
+@media (max-width: 700px) { .road-hint { display: none; } .road-sheet { padding: 10px 8px 8px; } }
 body:not([data-tab="calendar"]) .cal { display: none; }
 
 /* Calendar: month on the left half, time-ordered list on the right */
@@ -471,7 +525,9 @@ a.ev:hover { background: var(--bg); }
   #mail-updated { display: none; }
   .done-toggle span:last-child { display: inline; }
   /* To-Do / Emails tabs */
-  .tabs button { flex: 1; padding: 10px 8px; }
+  .tabs { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { flex: 1 0 auto; padding: 10px 14px; white-space: nowrap; }
   .tabs .badge { margin-left: 4px; }
   .tabs .wide-only { display: none; }
   .song-title { font-size: 17px; }
@@ -549,6 +605,7 @@ a.ev:hover { background: var(--bg); }
     <button type="button" data-tab="mail" aria-pressed="false">Emails<span class="badge" id="tab-mail-n"></span></button>
     <button type="button" data-tab="music" aria-pressed="false" hidden>Music<span class="badge" id="tab-music-n"></span></button>
     <button type="button" data-tab="calendar" aria-pressed="false" hidden>Calendar<span class="badge" id="tab-cal-n"></span></button>
+    <button type="button" data-tab="roadmap" aria-pressed="false" hidden>Roadmap<span class="badge" id="tab-road-n"></span></button>
   </nav>
 
   <div class="grid" id="grid">
@@ -634,6 +691,35 @@ a.ev:hover { background: var(--bg); }
       <div class="ev-note" id="ev-note" role="status" hidden></div>
       <div id="cal-events"></div>
       <div class="mail-empty" id="cal-empty" hidden></div>
+    </div>
+  </section>
+
+  <section class="road" id="road" aria-label="Roadmap" hidden>
+    <div class="sheet road-sheet">
+      <div class="road-head">
+        <button class="cal-nav" id="road-prev" type="button" aria-label="Previous year">‹</button>
+        <h2 id="road-year"></h2>
+        <button class="cal-nav" id="road-next" type="button" aria-label="Next year">›</button>
+        <span class="road-hint" id="road-hint">Hover the road to see each month. Click + to add a milestone.</span>
+      </div>
+      <div class="road-scroll">
+        <div class="road-stage" id="road-stage">
+          <svg id="road-svg" viewBox="0 0 1000 600" role="img" aria-label="Roadmap of the year"></svg>
+          <form class="road-pop" id="road-pop" hidden novalidate>
+            <div class="road-pop-head"><span id="road-pop-title">New milestone</span><button type="button" class="road-x" id="road-pop-x" aria-label="Close">×</button></div>
+            <input id="rm-title" type="text" maxlength="120" placeholder="Milestone" aria-label="Milestone" autocomplete="off">
+            <input id="rm-date" type="date" aria-label="Date">
+            <textarea id="rm-notes" rows="2" maxlength="1000" placeholder="Notes (optional)" aria-label="Notes"></textarea>
+            <div class="road-pop-btns"><button type="button" class="road-del" id="rm-del" hidden>Delete</button><span></span><button type="submit" class="ev-save" id="rm-save">Add</button></div>
+            <div class="ev-msg" id="rm-msg" role="status"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="sheet road-list-sheet">
+      <div class="section-label"><span id="road-list-title">Milestones</span></div>
+      <ol class="road-list" id="road-list"></ol>
+      <div class="mail-empty" id="road-empty" hidden>No milestones yet this year. Hover the road and click + to add one.</div>
     </div>
   </section>
 
@@ -1196,9 +1282,9 @@ a.ev:hover { background: var(--bg); }
   $("tabs").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) { setTab(b.dataset.tab); window.scrollTo(0, 0); } });
   (function () { var t = "todo"; try { t = localStorage.getItem("todo-tab") || "todo"; } catch (e) {} setTab(t); })();
 
-  var mailOK = false, musicOK = false, calOK = false;
+  var mailOK = false, musicOK = false, calOK = false, roadOK = false;
   function updateTabs() {
-    var any = mailOK || musicOK || calOK;
+    var any = mailOK || musicOK || calOK || roadOK;
     $("tabs").hidden = !any;
     document.body.classList.toggle("tabbed", any);
     document.querySelector('#tabs button[data-tab="mail"]').hidden = !mailOK;
@@ -1207,9 +1293,11 @@ a.ev:hover { background: var(--bg); }
     $("music").hidden = !musicOK;
     document.querySelector('#tabs button[data-tab="calendar"]').hidden = !calOK;
     $("cal").hidden = !calOK;
+    document.querySelector('#tabs button[data-tab="roadmap"]').hidden = !roadOK;
+    $("road").hidden = !roadOK;
     var t = document.body.dataset.tab;
-    if ((t === "music" && !musicOK) || (t === "mail" && !mailOK) || (t === "calendar" && !calOK)) setTab("todo");
-    document.querySelector(".wrap").classList.toggle("wide", mailOK || (musicOK && t === "music") || (calOK && t === "calendar"));
+    if ((t === "music" && !musicOK) || (t === "mail" && !mailOK) || (t === "calendar" && !calOK) || (t === "roadmap" && !roadOK)) setTab("todo");
+    document.querySelector(".wrap").classList.toggle("wide", mailOK || (musicOK && t === "music") || (calOK && t === "calendar") || (roadOK && t === "roadmap"));
   }
   wideMQ.addEventListener && wideMQ.addEventListener("change", function () { setTab(document.body.dataset.tab || "todo"); });
   function showMail(on) {
@@ -1516,7 +1604,236 @@ a.ev:hover { background: var(--bg); }
     if (songsUnsub) { try { songsUnsub(); } catch (e) {} }
     songsUnsub = null; songs = null; musicOK = false; updateTabs();
   }
-  $("tabs").addEventListener("click", function () { setTimeout(function () { updateTabs(); if (document.body.dataset.tab === "music") renderSongs(); if (document.body.dataset.tab === "calendar") renderCal(); }, 0); });
+  // ---------- roadmap (team only): the year as an S-shaped road, four months per row ----------
+  var RD = { X0: 110, X1: 890, ROWS: [110, 300, 490], R: 95 };
+  RD.W = (RD.X1 - RD.X0) / 4;
+  var MONTHS_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var MON3 = MONTHS_LONG.map(function (m) { return m.slice(0, 3).toUpperCase(); });
+  var roadCentered = false, roadItems = null, roadUnsub = null, roadYear = new Date().getFullYear(), roadEditing = null, roadHoverM = -1;
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function sv(tag, attrs, parent) {
+    var el = document.createElementNS(SVGNS, tag);
+    Object.keys(attrs || {}).forEach(function (k) { el.setAttribute(k, attrs[k]); });
+    if (parent) parent.appendChild(el);
+    return el;
+  }
+  function monthSeg(m) {   // the stretch of road for month m: [xStart, xEnd, y]
+    var r = Math.floor(m / 4), k = m % 4, y = RD.ROWS[r];
+    if (r === 1) { var a = RD.X1 - k * RD.W; return [a, a - RD.W, y]; }
+    var b = RD.X0 + k * RD.W; return [b, b + RD.W, y];
+  }
+  function daysIn(y, m) { return new Date(y, m + 1, 0).getDate(); }
+  function datePoint(ymdStr) {
+    var p = String(ymdStr).split("-"), m = +p[1] - 1, d = +p[2];
+    var seg = monthSeg(m), f = (d - 0.5) / daysIn(+p[0], m);
+    return { x: seg[0] + (seg[1] - seg[0]) * f, y: seg[2], m: m };
+  }
+  function pointDate(x, y) {   // nearest spot on a straight stretch of road, or null
+    var r = -1; RD.ROWS.forEach(function (ry, i) { if (Math.abs(y - ry) <= 34) r = i; });
+    if (r < 0 || x < RD.X0 - 4 || x > RD.X1 + 4) return null;
+    x = Math.max(RD.X0, Math.min(RD.X1 - 0.01, x));
+    var along = r === 1 ? RD.X1 - x : x - RD.X0, k = Math.floor(along / RD.W), m = r * 4 + k;
+    var f = (along - k * RD.W) / RD.W, d = Math.min(daysIn(roadYear, m), Math.floor(f * daysIn(roadYear, m)) + 1);
+    var date = roadYear + "-" + String(m + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+    var pt = datePoint(date);
+    return { x: pt.x, y: pt.y, m: m, date: date };
+  }
+  function roadPath(upto) {   // the whole road, or just up to a point {x, y, m}
+    var X0 = RD.X0, X1 = RD.X1, Y = RD.ROWS, R = RD.R;
+    var d = "M " + X0 + " " + Y[0];
+    var lastRow = upto ? Math.floor(upto.m / 4) : 2;
+    for (var r = 0; r <= lastRow; r++) {
+      var endX = r === 1 ? X0 : X1;
+      if (upto && r === lastRow) { d += " H " + upto.x; break; }
+      d += " H " + endX;
+      if (r < 2) d += " A " + R + " " + R + " 0 0 " + (r === 0 ? 1 : 0) + " " + endX + " " + Y[r + 1];
+    }
+    return d;
+  }
+  function fmtShort(ymdStr) { var p = ymdStr.split("-"); return MON3[+p[1] - 1].charAt(0) + MON3[+p[1] - 1].slice(1).toLowerCase() + " " + (+p[2]); }
+  function renderRoad() {
+    if (!roadOK) return;
+    var svg = $("road-svg"); svg.innerHTML = "";
+    $("road-year").textContent = roadYear;
+    var today = ymd(new Date()), thisYear = new Date().getFullYear();
+    sv("path", { d: roadPath(), class: "rd-base" }, svg);
+    // progress so far this year
+    if (roadYear < thisYear) sv("path", { d: roadPath(), class: "rd-past" }, svg);
+    else if (roadYear === thisYear) sv("path", { d: roadPath(datePoint(today)), class: "rd-past" }, svg);
+    // month sections: highlight band, divider ticks, small label, big hover label
+    for (var m = 0; m < 12; m++) {
+      var seg = monthSeg(m), cx = (seg[0] + seg[1]) / 2;
+      sv("path", { d: "M " + seg[0] + " " + seg[2] + " H " + seg[1], class: "rd-month" + (m === roadHoverM ? " on" : ""), "data-m": m }, svg);
+      if (m % 4) sv("line", { x1: seg[0], y1: seg[2] - 13, x2: seg[0], y2: seg[2] + 13, class: "rd-tick" }, svg);
+      var mini = sv("text", { x: cx, y: seg[2] + 4, class: "rd-mini" + (m === roadHoverM ? " on" : ""), "data-mi": m }, svg);
+      mini.textContent = m === roadHoverM ? MONTHS_LONG[m].toUpperCase() : MON3[m];
+    }
+    var st = sv("text", { x: RD.X0 - 14, y: RD.ROWS[0] + 4, class: "rd-end", "text-anchor": "end" }, svg); st.textContent = "START";
+    var en = sv("text", { x: RD.X1 + 14, y: RD.ROWS[2] + 4, class: "rd-end" }, svg); en.textContent = roadYear + 1 + " →";
+    // milestones, with labels placed above or below so they don't overlap
+    var items = (roadItems || []).filter(function (it) { return String(it.date).slice(0, 4) === String(roadYear); })
+      .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    var placed = [];
+    items.forEach(function (it) {
+      var pt = datePoint(it.date), row = Math.floor(pt.m / 4);
+      var title = (it.title || "").length > 24 ? it.title.slice(0, 23) + "…" : (it.title || "");
+      var w = Math.max(title.length * 7.2, 46) + 8, x0 = pt.x - w / 2, x1 = pt.x + w / 2, spot = null;
+      for (var lvl = 0; lvl < 4 && !spot; lvl++) {
+        ["up", "down"].forEach(function (side) {
+          if (spot) return;
+          var clash = placed.some(function (q) { return q.row === row && q.side === side && q.lvl === lvl && !(x1 < q.x0 || x0 > q.x1); });
+          if (!clash) spot = { side: side, lvl: lvl };
+        });
+      }
+      spot = spot || { side: "up", lvl: 0 };
+      placed.push({ row: row, side: spot.side, lvl: spot.lvl, x0: x0, x1: x1 });
+      var ly = spot.side === "up" ? pt.y - 40 - spot.lvl * 34 : pt.y + 44 + spot.lvl * 34;
+      var g = sv("g", { class: "rd-pin" + (it.date < today ? " past" : "") + (roadEditing === it.id ? " sel" : ""), "data-id": it.id, tabindex: "0", role: "button", "aria-label": it.title + ", " + fmtShort(it.date) }, svg);
+      sv("line", { x1: pt.x, y1: pt.y, x2: pt.x, y2: spot.side === "up" ? ly + 6 : ly - 14, class: "stem" }, g);
+      var t1 = sv("text", { x: pt.x, y: ly, class: "lbl", "text-anchor": "middle" }, g); t1.textContent = title;
+      var t2 = sv("text", { x: pt.x, y: spot.side === "up" ? ly - 15 : ly + 14, class: "sub", "text-anchor": "middle" }, g); t2.textContent = fmtShort(it.date);
+      sv("circle", { cx: pt.x, cy: pt.y, r: 8, class: "dot" }, g);
+      var tip = sv("title", {}, g); tip.textContent = it.title + " · " + fmtShort(it.date) + (it.notes ? "\n" + it.notes : "");
+    });
+    // today
+    if (roadYear === thisYear) {
+      var tp = datePoint(today), tg = sv("g", { class: "rd-today" }, svg);
+      sv("circle", { cx: tp.x, cy: tp.y, r: 5 }, tg);
+    }
+    // the + that follows the pointer along the road
+    var plus = sv("g", { class: "rd-plus", id: "rd-plus", visibility: "hidden" }, svg);
+    sv("rect", { x: -34, y: -44, width: 68, height: 22, rx: 11, class: "rd-pbg" }, plus);
+    var pd = sv("text", { x: 0, y: -28.5, class: "rd-pdate" }, plus); pd.id = "rd-pdate";
+    sv("circle", { cx: 0, cy: 0, r: 14 }, plus);
+    sv("path", { d: "M -6 0 H 6 M 0 -6 V 6" }, plus);
+    // list
+    var list = $("road-list"); list.innerHTML = "";
+    items.forEach(function (it) {
+      var li = document.createElement("li"); li.dataset.id = it.id; if (it.date < today) li.className = "past";
+      li.innerHTML = '<span class="d"></span><div><div class="t"></div><div class="n"></div></div>';
+      li.querySelector(".d").textContent = fmtShort(it.date);
+      li.querySelector(".t").textContent = it.title;
+      li.querySelector(".n").textContent = it.notes || "";
+      list.appendChild(li);
+    });
+    $("road-list-title").textContent = "Milestones · " + roadYear;
+    var sc = document.querySelector(".road-scroll");   // phones: start the road at today
+    if (!roadCentered && sc.scrollWidth > sc.clientWidth && sc.clientWidth) {
+      roadCentered = true;
+      var cp = datePoint(roadYear === thisYear ? today : roadYear + "-01-01"), k = $("road-svg").getBoundingClientRect().width / 1000;
+      sc.scrollLeft = Math.max(0, cp.x * k - sc.clientWidth / 2);
+    }
+    $("road-empty").hidden = items.length > 0;
+    var soon = (roadItems || []).filter(function (it) { return it.date >= today && it.date <= addDays(today, 30); }).length;
+    $("tab-road-n").textContent = soon || "";
+  }
+  function svgPoint(e) {
+    var svg = $("road-svg"), pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+  function setHoverMonth(m) {
+    if (m === roadHoverM) return;
+    roadHoverM = m;
+    var svg = $("road-svg");
+    Array.prototype.forEach.call(svg.querySelectorAll(".rd-month"), function (el) { el.classList.toggle("on", +el.getAttribute("data-m") === m); });
+    Array.prototype.forEach.call(svg.querySelectorAll(".rd-mini"), function (el) {
+      var i = +el.getAttribute("data-mi"), on = i === m;
+      el.classList.toggle("on", on); el.textContent = on ? MONTHS_LONG[i].toUpperCase() : MON3[i];
+    });
+  }
+  function showPlus(hit) {
+    var plus = $("rd-plus"); if (!plus) return;
+    if (!hit || !canEdit) { plus.setAttribute("visibility", "hidden"); return; }
+    plus.setAttribute("transform", "translate(" + hit.x + " " + hit.y + ")");
+    $("rd-pdate").textContent = fmtShort(hit.date);
+    plus.setAttribute("visibility", "visible");
+  }
+  $("road-svg").addEventListener("pointermove", function (e) {
+    if (e.target.closest && e.target.closest(".rd-pin")) { showPlus(null); return; }
+    var hit = pointDate.apply(null, (function (p) { return [p.x, p.y]; })(svgPoint(e)));
+    setHoverMonth(hit ? hit.m : -1); showPlus(hit);
+  });
+  $("road-svg").addEventListener("pointerleave", function () { if ($("road-pop").hidden) setHoverMonth(-1); showPlus(null); });
+  $("road-svg").addEventListener("click", function (e) {
+    var pin = e.target.closest && e.target.closest(".rd-pin");
+    if (pin) { openRoadPop(pin.getAttribute("data-id")); return; }
+    var p = svgPoint(e), hit = pointDate(p.x, p.y);
+    if (hit && canEdit) { setHoverMonth(hit.m); showPlus(hit); openRoadPop(null, hit.date); }
+  });
+  $("road-svg").addEventListener("keydown", function (e) {
+    var pin = e.target.closest && e.target.closest(".rd-pin");
+    if (pin && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openRoadPop(pin.getAttribute("data-id")); }
+  });
+  function placePop(date) {
+    var pop = $("road-pop"), stage = $("road-stage"), sc = stage.clientWidth / 1000, pt = datePoint(date);
+    var w = pop.offsetWidth || 250, h = pop.offsetHeight || 230;
+    var left = Math.max(6, Math.min(stage.clientWidth - w - 6, pt.x * sc - w / 2));
+    var top = Math.floor(pt.m / 4) === 2 ? pt.y * sc - h - 22 : pt.y * sc + 22;
+    pop.style.left = left + "px"; pop.style.top = Math.max(4, top) + "px";
+  }
+  function openRoadPop(id, date) {
+    var it = id ? (roadItems || []).filter(function (x) { return x.id === id; })[0] : null;
+    if (id && !it) return;
+    roadEditing = id || null;
+    var pop = $("road-pop");
+    $("road-pop-title").textContent = it ? "Milestone" : "New milestone";
+    $("rm-title").value = it ? it.title : ""; $("rm-date").value = it ? it.date : date;
+    $("rm-notes").value = it ? (it.notes || "") : ""; $("rm-msg").textContent = "";
+    $("rm-del").hidden = !it || !canEdit; $("rm-save").textContent = it ? "Save" : "Add";
+    [$("rm-title"), $("rm-date"), $("rm-notes")].forEach(function (el) { el.readOnly = !canEdit; });
+    $("rm-save").hidden = !canEdit;
+    pop.hidden = false; placePop(it ? it.date : date);
+    setHoverMonth(datePoint(it ? it.date : date).m);
+    Array.prototype.forEach.call($("road-svg").querySelectorAll(".rd-pin"), function (g) { g.classList.toggle("sel", g.getAttribute("data-id") === roadEditing); });
+    if (canEdit) $("rm-title").focus({ preventScroll: true });
+  }
+  function closeRoadPop() { $("road-pop").hidden = true; roadEditing = null; setHoverMonth(-1); showPlus(null); renderRoad(); }
+  $("road-pop-x").addEventListener("click", closeRoadPop);
+  $("road-pop").addEventListener("keydown", function (e) { if (e.key === "Escape") closeRoadPop(); });
+  $("road-pop").addEventListener("input", function () { $("rm-msg").textContent = ""; });
+  $("rm-date").addEventListener("change", function () { if (/^\d{4}-\d{2}-\d{2}$/.test($("rm-date").value) && $("rm-date").value.slice(0, 4) === String(roadYear)) { placePop($("rm-date").value); setHoverMonth(datePoint($("rm-date").value).m); } });
+  document.addEventListener("pointerdown", function (e) {   // click away to close
+    var pop = $("road-pop"); if (pop.hidden) return;
+    if (e.target.closest && (e.target.closest("#road-pop") || e.target.closest("#road-svg"))) return;
+    closeRoadPop();
+  });
+  $("road-pop").addEventListener("submit", function (e) {
+    e.preventDefault(); if (!canEdit) return;
+    var title = $("rm-title").value.trim(), date = $("rm-date").value, notes = $("rm-notes").value.trim();
+    if (!title) { $("rm-msg").textContent = "Add a name for the milestone."; $("rm-title").focus(); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { $("rm-msg").textContent = "Pick a date."; return; }
+    var colr = col.firestore.collection("roadmap"), data = { title: title, date: date, notes: notes, updatedAt: Date.now() };
+    var p = roadEditing ? colr.doc(roadEditing).update(data) : colr.doc().set(Object.assign({ createdAt: Date.now() }, data));
+    p.catch(denied);
+    if (date.slice(0, 4) !== String(roadYear)) roadYear = +date.slice(0, 4);   // jump to that year
+    $("road-pop").hidden = true; roadEditing = null; setHoverMonth(-1);
+  });
+  $("rm-del").addEventListener("click", function () {
+    if (!roadEditing || !canEdit) return;
+    var id = roadEditing; $("road-pop").hidden = true; roadEditing = null;
+    col.firestore.collection("roadmap").doc(id).delete().catch(denied);
+  });
+  $("road-list").addEventListener("click", function (e) {
+    var li = e.target.closest("li"); if (!li) return;
+    $("road-stage").scrollIntoView({ block: "nearest", behavior: "smooth" });
+    openRoadPop(li.dataset.id);
+  });
+  $("road-prev").addEventListener("click", function () { roadYear--; $("road-pop").hidden = true; roadEditing = null; renderRoad(); });
+  $("road-next").addEventListener("click", function () { roadYear++; $("road-pop").hidden = true; roadEditing = null; renderRoad(); });
+  window.addEventListener("resize", function () { if (!$("road-pop").hidden) placePop($("rm-date").value); });
+  function startRoad() {
+    stopRoad();
+    roadUnsub = col.firestore.collection("roadmap").onSnapshot(function (snap) {
+      roadItems = snap.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); });
+      roadOK = true; updateTabs();
+      if ($("road-pop").hidden) renderRoad();   // don't redraw under an open form
+    }, function () { stopRoad(); });   // not on the team list: no Roadmap tab
+  }
+  function stopRoad() {
+    if (roadUnsub) { try { roadUnsub(); } catch (e) {} }
+    roadUnsub = null; roadItems = null; roadOK = false; updateTabs();
+  }
+  $("tabs").addEventListener("click", function () { setTimeout(function () { updateTabs(); if (document.body.dataset.tab === "music") renderSongs(); if (document.body.dataset.tab === "calendar") renderCal(); if (document.body.dataset.tab === "roadmap") renderRoad(); }, 0); });
 
   // ---------- calendar (team only): Google Calendar events + dates found in email ----------
   var calEvents = null, calUnsub = null, calSel = null;
@@ -1700,7 +2017,7 @@ a.ev:hover { background: var(--bg); }
     user = u;
     canEdit = !!u;   // the database rules have the final say; a refused write shows a message
     setEditMode();
-    if (u) { startMail(); startMusic(); startCal(); } else { stopMail(); stopMusic(); stopCal(); }
+    if (u) { startMail(); startMusic(); startCal(); startRoad(); } else { stopMail(); stopMusic(); stopCal(); stopRoad(); }
   });
 })();
 </script>
