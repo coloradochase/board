@@ -385,6 +385,75 @@ body:not([data-tab="roadmap"]) .road { display: none; }
 .road-list .t { font-weight: 500; font-size: 14.5px; overflow-wrap: anywhere; }
 .road-list .n { font-size: 12.5px; color: var(--muted); margin-top: 2px; white-space: pre-wrap; }
 @media (max-width: 700px) { .road-hint { display: none; } .road-sheet { padding: 10px 8px 8px; } }
+body.tabbed[data-tab="meetings"] .grid { display: none; }
+body:not([data-tab="meetings"]) .meet { display: none; }
+/* Meetings */
+.meet { display: flex; flex-direction: column; gap: 14px; max-width: 860px; }
+.meet-top { display: flex; align-items: center; gap: 10px; }
+.meet-top h2 { margin: 0; font: 700 22px var(--display); }
+.meet-top span { flex: 1; }
+.meet-new { font: 600 13px var(--body); color: var(--sheet); background: var(--accent); border: 0; border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+.meet-new:hover { filter: brightness(1.08); }
+.meet-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 18px 14px; border: 1.5px dashed var(--line); border-radius: 12px; color: var(--muted); font-size: 14px; cursor: pointer; transition: border-color .12s, background .12s, color .12s; }
+.meet-drop b { color: var(--ink); font-weight: 600; }
+.meet-drop small { font: 11px var(--mono); letter-spacing: .04em; }
+.meet-drop:hover, .meet-drop.over { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); }
+.meet-drop:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.meet-card { background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.meet-h { display: flex; align-items: flex-start; gap: 8px; padding: 12px 12px 4px 8px; }
+.meet-tog { flex: none; width: 30px; height: 30px; margin-top: 2px; border: 0; border-radius: 8px; background: none; color: var(--muted); cursor: pointer; display: grid; place-items: center; }
+.meet-tog:hover { background: var(--bg); color: var(--ink); }
+.meet-tog svg { width: 14px; height: 14px; transition: transform .15s; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.meet-card.open .meet-tog svg { transform: rotate(90deg); }
+.meet-hmain { flex: 1; min-width: 0; }
+.meet-title { width: 100%; box-sizing: border-box; font: 600 19px var(--body); color: var(--ink); background: none; border: 1px solid transparent; border-radius: 8px; padding: 4px 6px; }
+.meet-when { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 0 6px 2px; }
+.meet-when input { font: 500 13px var(--mono); color: var(--muted); background: none; border: 1px solid transparent; border-radius: 6px; padding: 3px 4px; -webkit-appearance: none; appearance: none; min-height: 28px; }
+.meet-title:hover, .meet-when input:hover { border-color: var(--line); }
+.meet-title:focus, .meet-when input:focus, .meet-notes:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; color: var(--ink); }
+.meet-chip { font: 600 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.meet-chip.busy { color: var(--accent); border-color: var(--accent); }
+.meet-chip.err { color: var(--danger); border-color: var(--danger); }
+.meet-chip:empty { display: none; }
+.meet-del { flex: none; margin-top: 2px; }
+.meet-body { display: none; flex-direction: column; gap: 12px; padding: 4px 16px 16px 46px; }
+.meet-card.open .meet-body { display: flex; }
+.meet-peek { padding: 0 16px 12px 52px; color: var(--muted); font-size: 13.5px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.meet-card.open .meet-peek, .meet-peek:empty { display: none; }
+.meet-notes { width: 100%; box-sizing: border-box; min-height: 70px; font: 15px/1.45 var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; resize: vertical; }
+.meet-lab { font: 600 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+.meet-stat { display: flex; flex-direction: column; gap: 7px; font-size: 14px; }
+.meet-stat:empty { display: none; }
+.meet-stat .err { color: var(--danger); }
+.meet-stat .hint { font-size: 12.5px; color: var(--muted); }
+.meet-bar { height: 6px; border-radius: 99px; background: var(--bg); overflow: hidden; position: relative; }
+.meet-bar i { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 99px; transition: width .3s; }
+.meet-bar.spin i { width: 35% !important; animation: meet-spin 1.3s ease-in-out infinite; }
+@keyframes meet-spin { from { left: -35%; } to { left: 100%; } }
+@media (prefers-reduced-motion: reduce) { .meet-bar.spin i { animation: none; width: 100% !important; opacity: .5; } }
+.meet-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.meet-btn { font: 600 12.5px var(--body); color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+.meet-btn:hover { border-color: var(--accent); }
+.meet-sum p { margin: 0 0 4px; font-size: 15px; line-height: 1.5; }
+.meet-sum ul { margin: 0; padding-left: 18px; font-size: 14.5px; line-height: 1.45; }
+.meet-sum li { margin: 3px 0; }
+.meet-acts { list-style: none; padding: 0 !important; }
+.meet-acts li { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+.meet-acts li:first-child { border-top: 0; }
+.meet-acts .t { flex: 1; min-width: 0; }
+.meet-acts .o { font: 600 10.5px var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin-left: 6px; }
+.meet-todo { flex: none; font: 600 11.5px var(--body); color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; cursor: pointer; white-space: nowrap; }
+.meet-todo:hover { border-color: var(--accent); }
+.meet-todo:disabled { color: var(--muted); cursor: default; border-color: transparent; }
+.meet-tx summary { cursor: pointer; font: 600 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.meet-tx-body { margin-top: 8px; max-height: 420px; overflow: auto; white-space: pre-wrap; font-size: 13.5px; line-height: 1.55; background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+.meet-confirm { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.meet-confirm .yes { background: var(--danger); color: var(--sheet); border: 0; border-radius: 999px; padding: 5px 12px; font: 600 12.5px var(--body); cursor: pointer; }
+@media (max-width: 700px) {
+  .meet-body { padding: 4px 12px 14px 12px; }
+  .meet-peek { padding: 0 12px 12px 14px; }
+  .meet-title { font-size: 17px; }
+}
 body:not([data-tab="calendar"]) .cal { display: none; }
 
 /* Calendar: month on the left half, time-ordered list on the right */
@@ -615,6 +684,7 @@ a.ev:hover { background: var(--bg); }
     <button type="button" data-tab="music" aria-pressed="false" hidden>Music<span class="badge" id="tab-music-n"></span></button>
     <button type="button" data-tab="roadmap" aria-pressed="false" hidden>Roadmap<span class="badge" id="tab-road-n"></span></button>
     <button type="button" data-tab="calendar" aria-pressed="false" hidden>Calendar<span class="badge" id="tab-cal-n"></span></button>
+    <button type="button" data-tab="meetings" aria-pressed="false" hidden>Meetings<span class="badge" id="tab-meet-n"></span></button>
   </nav>
 
   <div class="grid" id="grid">
@@ -730,6 +800,13 @@ a.ev:hover { background: var(--bg); }
       <ol class="road-list" id="road-list"></ol>
       <div class="mail-empty" id="road-empty" hidden>No milestones yet this year. Hover the road and click + to add one.</div>
     </div>
+  </section>
+
+  <section class="meet" id="meet" aria-label="Meetings" hidden>
+    <div class="meet-top"><h2>Meetings</h2><span></span><button class="meet-new" id="meet-new" type="button">+ New meeting</button></div>
+    <div class="meet-drop" id="meet-drop-new" tabindex="0" role="button"><b>Drop a recording to start a new meeting</b><span>or tap to choose a file</span><small>MP3 · M4A · WAV · AAC · OGG · FLAC</small></div>
+    <input type="file" id="meet-file" accept="audio/*,.m4a,.mp3,.wav,.aac,.ogg,.oga,.opus,.flac,.webm,.aif,.aiff" hidden>
+    <div id="meet-list"></div>
   </section>
 
   <div class="status" id="status">Loading the list…</div>
@@ -1304,9 +1381,9 @@ a.ev:hover { background: var(--bg); }
   $("tabs").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) { setTab(b.dataset.tab); window.scrollTo(0, 0); } });
   (function () { var t = "todo"; try { t = localStorage.getItem("todo-tab") || "todo"; } catch (e) {} setTab(t); })();
 
-  var mailOK = false, musicOK = false, calOK = false, roadOK = false;
+  var mailOK = false, musicOK = false, calOK = false, roadOK = false, meetOK = false;
   function updateTabs() {
-    var any = mailOK || musicOK || calOK || roadOK;
+    var any = mailOK || musicOK || calOK || roadOK || meetOK;
     $("tabs").hidden = !any;
     document.body.classList.toggle("tabbed", any);
     document.querySelector('#tabs button[data-tab="mail"]').hidden = !mailOK;
@@ -1317,9 +1394,11 @@ a.ev:hover { background: var(--bg); }
     $("cal").hidden = !calOK;
     document.querySelector('#tabs button[data-tab="roadmap"]').hidden = !roadOK;
     $("road").hidden = !roadOK;
+    document.querySelector('#tabs button[data-tab="meetings"]').hidden = !meetOK;
+    $("meet").hidden = !meetOK;
     var t = document.body.dataset.tab;
-    if ((t === "music" && !musicOK) || (t === "mail" && !mailOK) || (t === "calendar" && !calOK) || (t === "roadmap" && !roadOK)) setTab("todo");
-    document.querySelector(".wrap").classList.toggle("wide", mailOK || (musicOK && t === "music") || (calOK && t === "calendar") || (roadOK && t === "roadmap"));
+    if ((t === "music" && !musicOK) || (t === "mail" && !mailOK) || (t === "calendar" && !calOK) || (t === "roadmap" && !roadOK) || (t === "meetings" && !meetOK)) setTab("todo");
+    document.querySelector(".wrap").classList.toggle("wide", mailOK || (musicOK && t === "music") || (calOK && t === "calendar") || (roadOK && t === "roadmap") || (meetOK && t === "meetings"));
   }
   wideMQ.addEventListener && wideMQ.addEventListener("change", function () { setTab(document.body.dataset.tab || "todo"); });
   function showMail(on) {
@@ -1862,7 +1941,7 @@ a.ev:hover { background: var(--bg); }
     if (roadUnsub) { try { roadUnsub(); } catch (e) {} }
     roadUnsub = null; roadItems = null; roadOK = false; updateTabs();
   }
-  $("tabs").addEventListener("click", function () { setTimeout(function () { updateTabs(); if (document.body.dataset.tab === "music") renderSongs(); if (document.body.dataset.tab === "calendar") renderCal(); if (document.body.dataset.tab === "roadmap") renderRoad(); }, 0); });
+  $("tabs").addEventListener("click", function () { setTimeout(function () { updateTabs(); if (document.body.dataset.tab === "music") renderSongs(); if (document.body.dataset.tab === "calendar") renderCal(); if (document.body.dataset.tab === "roadmap") renderRoad(); if (document.body.dataset.tab === "meetings") renderMeet(); }, 0); });
 
   // ---------- calendar (team only): Google Calendar events + dates found in email ----------
   var calEvents = null, calUnsub = null, calSel = null;
@@ -2042,11 +2121,261 @@ a.ev:hover { background: var(--bg); }
   }
   setInterval(function () { if (calOK) renderCal(); }, 5 * 60 * 1000);
 
+
+  // ---------- meetings (team only): notes, plus a recording that Gemini transcribes and summarizes ----------
+  var meets = null, meetUnsub = null, meetNodes = {}, meetOpen = {}, meetUp = {}, meetSaveT = {}, meetAdded = {}, meetFirst = true, meetTarget = null;
+  var CHEV = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5 3l4 4-4 4"/></svg>';
+  var AUDIO_TYPES = { mp3: "audio/mp3", m4a: "audio/mp4", mp4: "audio/mp4", wav: "audio/wav", aac: "audio/aac", ogg: "audio/ogg", oga: "audio/ogg", opus: "audio/ogg", flac: "audio/flac", webm: "audio/webm", aif: "audio/aiff", aiff: "audio/aiff" };
+  function meetsRef() { return col.firestore.collection("meetings"); }
+  function ymdLocal(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function meetSorted() {
+    return (meets || []).slice().sort(function (a, b) {
+      return ((b.date || "") + (b.time || "99:99")).localeCompare((a.date || "") + (a.time || "99:99")) || (b.createdAt || 0) - (a.createdAt || 0);
+    });
+  }
+  function startMeet() {
+    stopMeet();
+    meetUnsub = meetsRef().onSnapshot(function (snap) {
+      meets = snap.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); });
+      if (meetFirst && meets.length) { meetOpen[meetSorted()[0].id] = true; meetFirst = false; }
+      meetOK = true; updateTabs(); renderMeet();
+    }, function () { stopMeet(); });   // not on the team list: no Meetings tab
+  }
+  function stopMeet() {
+    if (meetUnsub) { try { meetUnsub(); } catch (e) {} }
+    meetUnsub = null; meets = null; meetOK = false; updateTabs();
+  }
+  function meetChip(m) {
+    if (meetUp[m.id]) return ["Uploading", "busy"];
+    if (m.status === "processing") return ["Transcribing", "busy"];
+    if (m.status === "error") return ["Needs attention", "err"];
+    if (m.status === "done") return ["Summarized", ""];
+    return ["", ""];
+  }
+  function buildMeet(m) {
+    var el = document.createElement("article");
+    el.className = "meet-card"; el.dataset.id = m.id;
+    el.innerHTML =
+      '<div class="meet-h"><button class="meet-tog" type="button" aria-label="Show details">' + CHEV + '</button>' +
+      '<div class="meet-hmain"><input class="meet-title" type="text" maxlength="120" placeholder="Untitled meeting" aria-label="Meeting title">' +
+      '<div class="meet-when"><input class="meet-date" type="date" aria-label="Date"><input class="meet-time" type="time" aria-label="Time"><span class="meet-chip"></span></div></div>' +
+      '<button class="icon-btn meet-del" type="button" aria-label="Delete meeting">' + TRASH + '</button></div>' +
+      '<div class="meet-peek"></div>' +
+      '<div class="meet-body"><div class="meet-confirm" hidden>Delete this meeting and its summary? <button type="button" class="yes">Delete</button><button type="button" class="meet-btn no">Keep</button></div>' +
+      '<div><div class="meet-lab">Notes</div><textarea class="meet-notes" rows="3" maxlength="20000" placeholder="Agenda, notes, anything to remember…" aria-label="Meeting notes"></textarea></div>' +
+      '<div class="meet-stat"></div>' +
+      '<div class="meet-drop meet-drop-one" tabindex="0" role="button"><b>Drop the audio recording here</b><span>or tap to choose a file. It gets transcribed and summarized.</span></div>' +
+      '<div class="meet-sum"></div>' +
+      '<details class="meet-tx" hidden><summary>Transcript</summary><div class="meet-tx-body"></div></details></div>';
+    return el;
+  }
+  function setVal(el, v) { if (document.activeElement !== el && el.value !== v) el.value = v; }
+  function fillMeet(el, m) {
+    var q = function (c) { return el.querySelector(c); };
+    el.classList.toggle("open", !!meetOpen[m.id]);
+    q(".meet-tog").setAttribute("aria-expanded", meetOpen[m.id] ? "true" : "false");
+    if (!meetSaveT[m.id + "title"]) setVal(q(".meet-title"), m.title || "");
+    if (!meetSaveT[m.id + "date"]) setVal(q(".meet-date"), m.date || "");
+    if (!meetSaveT[m.id + "time"]) setVal(q(".meet-time"), m.time || "");
+    if (!meetSaveT[m.id + "notes"]) setVal(q(".meet-notes"), m.notes || "");
+    var chip = meetChip(m); q(".meet-chip").textContent = chip[0]; q(".meet-chip").className = "meet-chip " + chip[1];
+    q(".meet-peek").textContent = m.summary || (m.notes || "").split("\n")[0] || "";
+    // status line
+    var st = q(".meet-stat"), up = meetUp[m.id], html = "";
+    if (up) {
+      html = '<div>' + esc(up.msg) + '</div><div class="meet-bar"><i style="width:' + Math.round(up.pct * 100) + '%"></i></div><div class="hint">Keep this page open until the upload finishes.</div>';
+    } else if (m.status === "processing") {
+      var part = m.summaryDone && m.parts > 1 ? " (transcript part " + Math.min((m.progress || 0) + 1, m.parts) + " of " + m.parts + ")" : "";
+      html = '<div>' + (m.summaryDone ? "Summary ready. Writing the transcript" : "Transcribing and summarizing") + part + '…</div><div class="meet-bar spin"><i></i></div><div class="hint">This keeps going even if you close the page.</div>';
+    } else if (m.status === "uploading") {
+      html = '<div class="err">The upload didn\'t finish. Drop the recording again.</div>';
+    } else if (m.status === "error") {
+      html = '<div class="err">' + esc(m.error || "Something went wrong.") + '</div>' + (m.fileUri ? '<div class="meet-row"><button type="button" class="meet-btn meet-retry">Try again</button></div>' : "");
+    } else if (m.status === "done" && m.audioName) {
+      html = '<div class="meet-row"><span class="hint">From ' + esc(m.audioName) + '</span><button type="button" class="meet-btn meet-replace">Replace recording</button></div>';
+    }
+    if (st.dataset.h !== html) { st.innerHTML = html; st.dataset.h = html; }
+    q(".meet-drop-one").hidden = !!up || m.status === "processing" || m.status === "done";
+    // summary
+    var sum = "";
+    if (m.summary || (m.keyPoints && m.keyPoints.length) || (m.actionItems && m.actionItems.length)) {
+      if (m.summary) sum += '<div class="meet-lab">Summary</div><p>' + esc(m.summary) + '</p>';
+      if (m.keyPoints && m.keyPoints.length) sum += '<div class="meet-lab" style="margin-top:10px">Key points</div><ul>' + m.keyPoints.map(function (k) { return "<li>" + esc(k) + "</li>"; }).join("") + "</ul>";
+      if (m.actionItems && m.actionItems.length) sum += '<div class="meet-lab" style="margin-top:10px">Action items</div><ul class="meet-acts">' + m.actionItems.map(function (a, i) {
+        var added = meetAdded[m.id + ":" + i];
+        return '<li><span class="t">' + esc(a.task) + (a.owner ? '<span class="o">' + esc(a.owner) + '</span>' : '') + '</span><button type="button" class="meet-todo" data-i="' + i + '"' + (added ? " disabled" : "") + '>' + (added ? "Added ✓" : "+ To-Do") + '</button></li>';
+      }).join("") + "</ul>";
+    }
+    var sb = q(".meet-sum"); if (sb.dataset.h !== sum) { sb.innerHTML = sum; sb.dataset.h = sum; }
+    var tx = q(".meet-tx"); tx.hidden = !m.transcript;
+    if (m.transcript && q(".meet-tx-body").textContent !== m.transcript) q(".meet-tx-body").textContent = m.transcript;
+  }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function renderMeet() {
+    if (!meetOK) return;
+    var list = $("meet-list"), ms = meetSorted(), seen = {};
+    ms.forEach(function (m, i) {
+      seen[m.id] = true;
+      var el = meetNodes[m.id] || (meetNodes[m.id] = buildMeet(m));
+      fillMeet(el, m);
+      if (list.children[i] !== el) list.insertBefore(el, list.children[i] || null);
+    });
+    Object.keys(meetNodes).forEach(function (id) { if (!seen[id]) { meetNodes[id].remove(); delete meetNodes[id]; } });
+    var busy = ms.filter(function (m) { return meetUp[m.id] || m.status === "processing"; }).length;
+    $("tab-meet-n").textContent = busy || "";
+  }
+  function newMeeting(fields) {
+    var now = new Date(), ref = meetsRef().doc();
+    var d = Object.assign({ title: "", date: ymdLocal(now), time: pad(now.getHours()) + ":" + pad(now.getMinutes()), notes: "", createdAt: Date.now(), updatedAt: Date.now() }, fields || {});
+    meetOpen[ref.id] = true;
+    (meets = meets || []).push(Object.assign({ id: ref.id }, d)); renderMeet();
+    return ref.set(d).then(function () { return ref.id; }, function (e) { denied(e); throw e; });
+  }
+  $("meet-new").addEventListener("click", function () {
+    newMeeting().then(function (id) { var el = meetNodes[id]; if (el) { el.scrollIntoView({ block: "nearest", behavior: "smooth" }); el.querySelector(".meet-title").focus(); } }, function () {});
+  });
+  function saveMeetField(id, field, value) {
+    clearTimeout(meetSaveT[id + field]);
+    meetSaveT[id + field] = setTimeout(function () {
+      delete meetSaveT[id + field];
+      if (field === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(value)) return;
+      var p = {}; p[field] = value; p.updatedAt = Date.now();
+      meetsRef().doc(id).update(p).catch(denied);
+    }, field === "notes" || field === "title" ? 600 : 50);
+  }
+  $("meet-list").addEventListener("input", function (e) {
+    var card = e.target.closest(".meet-card"); if (!card) return;
+    var f = e.target.classList.contains("meet-title") ? "title" : e.target.classList.contains("meet-notes") ? "notes" : e.target.classList.contains("meet-date") ? "date" : e.target.classList.contains("meet-time") ? "time" : "";
+    if (f) saveMeetField(card.dataset.id, f, f === "title" ? e.target.value.slice(0, 120) : e.target.value);
+    if (f === "notes") growMeet(e.target);
+  });
+  function growMeet(t) { t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight + 2, 600) + "px"; }
+  $("meet-list").addEventListener("click", function (e) {
+    var card = e.target.closest(".meet-card"); if (!card) return;
+    var id = card.dataset.id, m = (meets || []).filter(function (x) { return x.id === id; })[0]; if (!m) return;
+    if (e.target.closest(".meet-tog") || (e.target.closest(".meet-h") && !e.target.closest("input, button")) || e.target.closest(".meet-peek")) {
+      meetOpen[id] = !meetOpen[id]; fillMeet(card, m);
+      if (meetOpen[id]) growMeet(card.querySelector(".meet-notes"));
+      return;
+    }
+    if (e.target.closest(".meet-del")) { meetOpen[id] = true; fillMeet(card, m); card.querySelector(".meet-confirm").hidden = false; return; }
+    if (e.target.closest(".meet-confirm .no")) { card.querySelector(".meet-confirm").hidden = true; return; }
+    if (e.target.closest(".meet-confirm .yes")) {
+      card.style.transition = "opacity .2s"; card.style.opacity = "0";
+      setTimeout(function () { meetsRef().doc(id).delete().catch(denied); }, 180);
+      return;
+    }
+    if (e.target.closest(".meet-drop-one") || e.target.closest(".meet-replace")) { pickAudio(id); return; }
+    if (e.target.closest(".meet-retry")) { meetProcessLoop(id, true); return; }
+    var td = e.target.closest(".meet-todo");
+    if (td && !td.disabled) {
+      var a = (m.actionItems || [])[+td.dataset.i]; if (!a) return;
+      var open = sorted().open, last = open.reduce(function (mx, x) { return Math.max(mx, x.order || 0); }, 0);
+      var t = { title: String(a.task).slice(0, 300), done: false, order: open.length ? last + 1000 : 1000, notes: ("From meeting: " + (m.title || "Untitled") + " (" + m.date + ")").slice(0, 5000), createdAt: Date.now() };
+      var who = PEOPLE.filter(function (p) { return a.owner && p.toLowerCase() === String(a.owner).split(" ")[0].toLowerCase(); })[0];
+      if (who) t.assignee = who;
+      var ref = col.doc();
+      remember({ label: "add “" + t.title.slice(0, 40) + "”", undo: { type: "delete", id: ref.id }, redo: { type: "create", id: ref.id, data: t } });
+      runOp({ type: "create", id: ref.id, data: t });
+      meetAdded[id + ":" + td.dataset.i] = true; fillMeet(card, m);
+    }
+  });
+  $("meet-list").addEventListener("keydown", function (e) {
+    if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("meet-drop-one")) { e.preventDefault(); pickAudio(e.target.closest(".meet-card").dataset.id); }
+    if (e.key === "Enter" && e.target.classList.contains("meet-title")) e.target.blur();
+  });
+  function pickAudio(id) { meetTarget = id; $("meet-file").value = ""; $("meet-file").click(); }
+  $("meet-file").addEventListener("change", function () { var f = this.files && this.files[0]; if (f) gotAudio(f, meetTarget); });
+  $("meet-drop-new").addEventListener("click", function () { pickAudio(null); });
+  $("meet-drop-new").addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickAudio(null); } });
+  // drag and drop: onto a meeting's zone, or the top zone for a new meeting
+  function dropZone(e) { return e.target.closest && e.target.closest(".meet-drop"); }
+  ["dragenter", "dragover"].forEach(function (ev) {
+    $("meet").addEventListener(ev, function (e) { var z = dropZone(e); if (!z) return; e.preventDefault(); z.classList.add("over"); });
+  });
+  $("meet").addEventListener("dragleave", function (e) { var z = dropZone(e); if (z && !z.contains(e.relatedTarget)) z.classList.remove("over"); });
+  $("meet").addEventListener("drop", function (e) {
+    var z = dropZone(e); if (!z) return; e.preventDefault(); z.classList.remove("over");
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (!f) return;
+    var card = z.closest(".meet-card"); gotAudio(f, card ? card.dataset.id : null);
+  });
+  window.addEventListener("dragover", function (e) { if (document.body.dataset.tab === "meetings") e.preventDefault(); });   // a missed drop shouldn't open the file
+  window.addEventListener("drop", function (e) { if (document.body.dataset.tab === "meetings" && !dropZone(e)) e.preventDefault(); });
+  function audioMime(f) {
+    var ext = (f.name.split(".").pop() || "").toLowerCase();
+    return AUDIO_TYPES[ext] || (/^audio\//.test(f.type) ? f.type : "");
+  }
+  function audioDuration(f) {
+    return new Promise(function (res) {
+      var a = document.createElement("audio"), url = URL.createObjectURL(f), done = function (v) { URL.revokeObjectURL(url); res(isFinite(v) && v > 0 ? v : 0); };
+      a.preload = "metadata"; a.onloadedmetadata = function () { done(a.duration); }; a.onerror = function () { done(0); };
+      setTimeout(function () { done(0); }, 8000); a.src = url;
+    });
+  }
+  function b64(blob) {
+    return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(String(r.result).split(",")[1] || ""); }; r.onerror = rej; r.readAsDataURL(blob); });
+  }
+  function flashMeetErr(id, msg) {
+    if (!id) { setStatus(msg, true); return; }
+    meetUp[id] = null; delete meetUp[id];
+    var m = (meets || []).filter(function (x) { return x.id === id; })[0], el = meetNodes[id];
+    if (m && el) { fillMeet(el, Object.assign({}, m, { status: "error", error: msg, fileUri: "" })); }
+  }
+  function gotAudio(f, id) {
+    if (!canEdit) return;
+    var mime = audioMime(f);
+    if (!mime) { flashMeetErr(id, "That file isn't an audio recording Gemini can read. Try MP3, M4A or WAV."); return; }
+    if (f.size > 1.5e9) { flashMeetErr(id, "That file is over 1.5 GB. Export a smaller copy (MP3 or M4A) and try again."); return; }
+    if (!CAL_API) { flashMeetErr(id, "The meeting service isn't connected yet."); return; }
+    var start = id ? Promise.resolve(id) : newMeeting({ title: f.name.replace(/\.[^.]+$/, "").slice(0, 120), date: ymdLocal(new Date(f.lastModified || Date.now())), time: (function (d) { return pad(d.getHours()) + ":" + pad(d.getMinutes()); })(new Date(f.lastModified || Date.now())) });
+    start.then(function (mid) { uploadAudio(mid, f, mime); }, function () {});
+  }
+  function uploadAudio(id, f, mime) {
+    meetOpen[id] = true;
+    meetUp[id] = { pct: 0, msg: "Getting the recording ready…" }; renderMeet();
+    var chunk = 0;
+    audioDuration(f).then(function (dur) {
+      return calPost({ action: "meetStart", id: id, name: f.name, mime: mime, size: f.size, duration: dur });
+    }).then(function (r) {
+      if (!r || !r.ok) throw new Error((r && r.error) || "Couldn't start the upload.");
+      chunk = r.chunk;
+      var off = 0;
+      function next() {
+        if (off >= f.size) return Promise.resolve();
+        var last = off + chunk >= f.size, here = off;
+        meetUp[id] = { pct: off / f.size, msg: "Uploading " + Math.round(off / f.size * 100) + "%" }; renderMeet();
+        return b64(f.slice(here, here + chunk)).then(function (data) {
+          var send = function () { return calPost({ action: "meetChunk", id: id, offset: here, data: data, last: last }); };
+          return send().catch(function () { return send(); }).then(function (r2) {
+            if (!r2 || !r2.ok) throw new Error((r2 && r2.error) || "The upload stopped.");
+            off = here + chunk; return next();
+          });
+        });
+      }
+      return next();
+    }).then(function () {
+      delete meetUp[id]; renderMeet();
+      meetProcessLoop(id, false);
+    }, function (e) {
+      flashMeetErr(id, (e && e.message) || "The upload stopped. Drop the recording again.");
+    });
+  }
+  function meetProcessLoop(id, retry) {
+    var n = 0;
+    (function go() {
+      calPost({ action: "meetProcess", id: id, retry: retry && n === 0 }).then(function (r) {
+        n++;
+        if (r && r.ok && !r.done && !r.busy && n < 10) go();
+      }, function () {});   // the 15-minute background run picks it up if this connection drops
+    })();
+  }
+  window.addEventListener("beforeunload", function (e) { if (Object.keys(meetUp).length) { e.preventDefault(); e.returnValue = ""; } });
+
   auth.onAuthStateChanged(function (u) {
     user = u;
     canEdit = !!u;   // the database rules have the final say; a refused write shows a message
     setEditMode();
-    if (u) { startMail(); startMusic(); startCal(); startRoad(); } else { stopMail(); stopMusic(); stopCal(); stopRoad(); }
+    if (u) { startMail(); startMusic(); startCal(); startRoad(); startMeet(); } else { stopMail(); stopMusic(); stopCal(); stopRoad(); stopMeet(); }
   });
 })();
 </script>
