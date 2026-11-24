@@ -326,6 +326,13 @@ body:not([data-tab="music"]) .music { display: none; }
 body.tabbed[data-tab="calendar"] .grid { display: none; }
 body.tabbed[data-tab="roadmap"] .grid { display: none; }
 body:not([data-tab="roadmap"]) .road { display: none; }
+body:not([data-tab="calendar"]):not([data-tab="roadmap"]) .calmap { display: none; }
+.calmap { display: inline-flex; align-self: flex-start; gap: 2px; padding: 3px; margin-bottom: 14px; background: var(--sheet); border: 1px solid var(--line); border-radius: 999px; }
+.calmap button { font: 600 13px var(--body); color: var(--muted); background: none; border: 0; border-radius: 999px; padding: 6px 16px; cursor: pointer; transition: background .15s, color .15s; }
+.calmap button:hover { color: var(--ink); }
+.calmap button.on { background: var(--ink); color: var(--sheet); }
+.calmap button[hidden] { display: none; }
+.calmap[hidden] { display: none; }
 /* Roadmap: an S-shaped road through the year, four months per row */
 .road { display: flex; flex-direction: column; gap: 20px; }
 .road-sheet { padding: 14px 14px 10px; }
@@ -682,8 +689,8 @@ a.ev:hover { background: var(--bg); }
     <button type="button" data-tab="todo" class="on" aria-pressed="true">To-Do<span class="wide-only" id="tab-todo-and"> &amp; Conversations</span><span class="badge" id="tab-todo-n"></span></button>
     <button type="button" data-tab="mail" aria-pressed="false">Conversations<span class="badge" id="tab-mail-n"></span></button>
     <button type="button" data-tab="music" aria-pressed="false" hidden>Music<span class="badge" id="tab-music-n"></span></button>
+    <button type="button" data-tab="calendar" aria-pressed="false" hidden>Cal/Map<span class="badge" id="tab-cal-n"></span></button>
     <button type="button" data-tab="roadmap" aria-pressed="false" hidden>Roadmap<span class="badge" id="tab-road-n"></span></button>
-    <button type="button" data-tab="calendar" aria-pressed="false" hidden>Calendar<span class="badge" id="tab-cal-n"></span></button>
     <button type="button" data-tab="meetings" aria-pressed="false" hidden>Meetings<span class="badge" id="tab-meet-n"></span></button>
   </nav>
 
@@ -735,6 +742,7 @@ a.ev:hover { background: var(--bg); }
     <div class="mail-empty" id="songs-empty" hidden>No songs yet. Add the first one above.</div>
   </section>
 
+  <div class="calmap" id="calmap" role="group" aria-label="Calendar or roadmap" hidden><button type="button" data-sub="calendar">Calendar</button><button type="button" data-sub="roadmap">Roadmap</button></div>
   <section class="cal" id="cal" aria-label="Calendar" hidden>
     <div class="sheet cal-month">
       <div class="cal-head">
@@ -1371,14 +1379,24 @@ a.ev:hover { background: var(--bg); }
     document.body.dataset.tab = tab;
     Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function (b) {
       // On wide screens the To-Do tab also shows emails, so it stays lit for "mail" too.
-      var on = b.dataset.tab === tab || (tab === "mail" && b.dataset.tab === "todo" && wideMQ.matches);
+      var on = b.dataset.tab === tab || (tab === "mail" && b.dataset.tab === "todo" && wideMQ.matches) || (tab === "roadmap" && b.dataset.tab === "calendar");
       b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false");
     });
     try { localStorage.setItem("todo-tab", tab); } catch (e) {}
+    if (tab === "calendar" || tab === "roadmap") {
+      try { localStorage.setItem("calmap-sub", tab); } catch (e) {}
+      Array.prototype.forEach.call(document.querySelectorAll("#calmap button"), function (b) { var on = b.dataset.sub === tab; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
+    }
     if (tab === "calendar" && typeof calRefresh === "function") calRefresh();
     growAll();
   }
-  $("tabs").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) { setTab(b.dataset.tab); window.scrollTo(0, 0); } });
+  function calmapSub() { var s = "calendar"; try { s = localStorage.getItem("calmap-sub") || "calendar"; } catch (e) {} return (s === "roadmap" && roadOK) || !calOK ? "roadmap" : "calendar"; }
+  $("tabs").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) { setTab(b.dataset.tab === "calendar" ? calmapSub() : b.dataset.tab); window.scrollTo(0, 0); } });
+  $("calmap").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b || b.dataset.sub === document.body.dataset.tab) return;
+    setTab(b.dataset.sub); updateTabs();
+    if (b.dataset.sub === "calendar") renderCal(); else renderRoad();
+  });
   (function () { var t = "todo"; try { t = localStorage.getItem("todo-tab") || "todo"; } catch (e) {} setTab(t); })();
 
   var mailOK = false, musicOK = false, calOK = false, roadOK = false, meetOK = false;
@@ -1390,9 +1408,12 @@ a.ev:hover { background: var(--bg); }
     document.querySelector('#tabs button[data-tab="music"]').hidden = !musicOK;
     $("tab-todo-and").hidden = !mailOK;
     $("music").hidden = !musicOK;
-    document.querySelector('#tabs button[data-tab="calendar"]').hidden = !calOK;
+    document.querySelector('#tabs button[data-tab="calendar"]').hidden = !(calOK || roadOK);
+    $("calmap").hidden = !(calOK && roadOK);
+    document.querySelector('#calmap [data-sub="calendar"]').hidden = !calOK;
+    document.querySelector('#calmap [data-sub="roadmap"]').hidden = !roadOK;
     $("cal").hidden = !calOK;
-    document.querySelector('#tabs button[data-tab="roadmap"]').hidden = !roadOK;
+    document.querySelector('#tabs button[data-tab="roadmap"]').hidden = true;   // lives inside Cal/Map
     $("road").hidden = !roadOK;
     document.querySelector('#tabs button[data-tab="meetings"]').hidden = !meetOK;
     $("meet").hidden = !meetOK;
