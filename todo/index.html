@@ -910,8 +910,15 @@ a.ev:hover { background: var(--bg); }
     if (!canEdit) return;
     if (typingUnsaved(e.target)) return;   // a box with fresh, unsaved typing undoes its own text first
     e.preventDefault();
-    if (e.target && e.target.blur && /^(TEXTAREA|INPUT)$/.test(e.target.tagName)) e.target.blur();
+    var el = e.target;   // leave a task's own box so the refreshed row shows; the add box keeps the cursor
+    if (el && el.id !== "new-task" && el.blur && /^(TEXTAREA|INPUT)$/.test(el.tagName)) el.blur();
     if (k === "y" || e.shiftKey) redo(); else undo();
+  });
+  document.addEventListener("beforeinput", function (e) {   // Undo / Redo from the browser's Edit menu
+    if (e.inputType !== "historyUndo" && e.inputType !== "historyRedo") return;
+    if (!canEdit || typingUnsaved(e.target)) return;
+    e.preventDefault();
+    if (e.inputType === "historyRedo") redo(); else undo();
   });
 
   // ---------- actions ----------
