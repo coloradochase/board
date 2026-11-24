@@ -894,14 +894,23 @@ a.ev:hover { background: var(--bg); }
     u.title = undoStack.length ? "Undo " + undoStack[undoStack.length - 1].label + " (⌘Z)" : "Nothing to undo";
     r.title = redoStack.length ? "Redo " + redoStack[redoStack.length - 1].label + " (⌘⇧Z)" : "Nothing to redo";
   }
+  function typingUnsaved(el) {
+    if (!el || !/^(TEXTAREA|INPUT)$/.test(el.tagName)) return false;
+    if (el.id === "new-task") return el.value.trim() !== "";
+    var li = el.closest && el.closest(".item"), t = li && find(li.dataset.id);
+    if (t && el.classList.contains("title")) return el.value.replace(/\s*\n\s*/g, " ").trim() !== (t.title || "");
+    if (t && el.classList.contains("note")) return el.value !== (t.id in savedNotes ? savedNotes[t.id] : (t.notes || ""));
+    return true;   // other forms (music, calendar) keep normal text undo
+  }
   $("undo-btn").addEventListener("click", undo);
   $("redo-btn").addEventListener("click", redo);
   document.addEventListener("keydown", function (e) {
     if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
     var k = e.key.toLowerCase(); if (k !== "z" && k !== "y") return;
-    var el = e.target;   // inside a text box, let the box undo its own typing
-    if (el && (el.tagName === "TEXTAREA" || el.tagName === "INPUT" || el.isContentEditable)) return;
+    if (!canEdit) return;
+    if (typingUnsaved(e.target)) return;   // a box with fresh, unsaved typing undoes its own text first
     e.preventDefault();
+    if (e.target && e.target.blur && /^(TEXTAREA|INPUT)$/.test(e.target.tagName)) e.target.blur();
     if (k === "y" || e.shiftKey) redo(); else undo();
   });
 
