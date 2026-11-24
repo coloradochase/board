@@ -263,6 +263,8 @@ body.readonly .assign:not(.set), .item.done .assign:not(.set) { visibility: hidd
 .people { display: flex; flex-direction: column; gap: 20px; }
 .people:empty { display: none; }
 .person-sheet .section-label { color: var(--ink); font-weight: 600; }
+.done-day { list-style: none; display: flex; align-items: center; gap: 10px; padding: 7px 16px 5px; font: 600 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.done-day::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .person-sheet .section-label .n { color: var(--muted); font-weight: 400; }
 .none-left { padding: 14px 16px; color: var(--muted); font-size: 13.5px; }
 .row > .tools { grid-area: x; display: flex; justify-content: flex-end; margin-top: 2px; }
@@ -781,6 +783,14 @@ a.ev:hover { background: var(--bg); }
     return { open: open, done: done };
   }
 
+  var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  function doneDay(ms) {
+    if (!ms) return "Earlier";
+    var d = new Date(ms), n = d.getDate();
+    var suf = (n % 100 >= 11 && n % 100 <= 13) ? "th" : ["th","st","nd","rd"][n % 10] || "th";
+    return MONTHS[d.getMonth()] + " " + n + suf + (d.getFullYear() !== new Date().getFullYear() ? ", " + d.getFullYear() : "");
+  }
+
   // ---------- render ----------
   function itemEl(t, idx, isDone) {
     var li = document.createElement("li");
@@ -863,7 +873,12 @@ a.ev:hover { background: var(--bg); }
     $("open-label").textContent = anyAssigned ? "To-Do · Unassigned" : "To-Do · Up next";
     $("none-left").hidden = !(anyAssigned && !mine.length);
     doneList.innerHTML = "";
-    s.done.forEach(function (t, i) { doneList.appendChild(itemEl(t, i, true)); });
+    var lastDay = null;
+    s.done.forEach(function (t, i) {   // newest first, with a skinny divider per day
+      var day = doneDay(t.doneAt);
+      if (day !== lastDay) { var d = document.createElement("li"); d.className = "done-day"; d.setAttribute("role", "presentation"); d.textContent = day; doneList.appendChild(d); lastDay = day; }
+      doneList.appendChild(itemEl(t, i, true));
+    });
     $("empty").hidden = !loaded || tasks.length > 0;
     var canImport = canEdit && loaded && tasks.length === 0 && window.STARTER_TASKS && window.STARTER_TASKS.length;
     $("import-btn").hidden = !canImport;
