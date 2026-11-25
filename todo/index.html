@@ -3239,9 +3239,11 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
   // ---------- header photo carousel (team only): 3 cards, one step left every few seconds ----------
   var photos = null, photosUnsub = null, reelPos = 0, reelTimer = 0, reelCards = [], reelBusy = false;
   var REEL_MS = 4200;
+  var REEL_ON = false;   // header photos switched off for now; set to true to bring them back (photos are still saved)
   function photosRef() { return col.firestore.collection("headerPhotos"); }
   function startPhotos() {
     stopPhotos();
+    if (!REEL_ON) return;
     photosUnsub = photosRef().onSnapshot(function (snap) {
       var before = photos ? photos.map(function (p) { return p.id; }).join() : null;
       photos = snap.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); }).sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
