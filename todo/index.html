@@ -173,6 +173,31 @@ body {
 .mail-undo button { font: 500 13px var(--body); color: var(--sheet); background: transparent; border: 1px solid currentColor; border-radius: 999px; padding: 4px 12px; cursor: pointer; }
 @media (hover: none) { .mc-x { opacity: .8; width: 40px; height: 40px; top: 6px; right: 4px; } }
 header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+/* Header photo carousel: three cards, sliding one spot left at a time */
+.reel { --cw: 96px; --ch: 64px; --gap: 10px; position: relative; flex: 0 1 auto; align-self: center; display: flex; align-items: center; gap: 6px; margin: 0 auto; }
+.reel-track { position: relative; width: calc(var(--cw) * 3 + var(--gap) * 2); height: var(--ch); }
+.reel-card { position: absolute; top: 0; left: 0; width: var(--cw); height: var(--ch); border-radius: 10px; overflow: hidden; background: var(--sheet); box-shadow: 0 2px 10px rgba(0,0,0,.18); transition: transform .9s cubic-bezier(.65, 0, .25, 1), opacity .7s ease; will-change: transform, opacity; }
+.reel-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.reel-card.gone { opacity: 0; }
+.reel-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1.5px dashed var(--line); border-radius: 10px; font: 600 12px var(--body); color: var(--muted); background: none; cursor: pointer; }
+.reel-empty:hover { border-color: var(--accent); color: var(--accent); }
+.reel-edit { position: absolute; right: -36px; top: 50%; margin-top: -14px; z-index: 3; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line); background: var(--sheet); color: var(--muted); display: grid; place-items: center; cursor: pointer; opacity: 0; transition: opacity .2s; }
+.reel:hover .reel-edit, .reel-edit:focus-visible, .reel.editing .reel-edit { opacity: 1; }
+.reel-edit:hover { color: var(--accent); border-color: var(--accent); }
+.reel-edit svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
+.reel-pop { position: absolute; top: calc(100% + 10px); left: 50%; transform: translateX(-50%); z-index: 20; width: 340px; box-sizing: border-box; padding: 10px 12px 12px; background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 34px rgba(0,0,0,.25); display: flex; flex-direction: column; gap: 10px; animation: toast-in .14s ease-out; }
+.reel-pop-head { display: flex; justify-content: space-between; align-items: center; font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.reel-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-height: 260px; overflow-y: auto; }
+.reel-grid .t { position: relative; aspect-ratio: 3 / 2; border-radius: 6px; overflow: hidden; background: var(--bg); }
+.reel-grid .t img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.reel-grid .t button { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; font-size: 13px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity .15s; }
+.reel-grid .t:hover button, .reel-grid .t button:focus-visible { opacity: 1; }
+.reel-grid .none { grid-column: 1 / -1; font-size: 13px; color: var(--muted); padding: 6px 0; }
+.reel-pop-foot { display: flex; align-items: center; gap: 10px; }
+.reel-pop-foot .ev-save { font: 600 13px var(--body); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.reel-msg { font-size: 12px; color: var(--muted); }
+@media (max-width: 980px) { .reel { display: none !important; } }
+@media (prefers-reduced-motion: reduce) { .reel-card { transition: opacity .3s; } }
 h1 { font-family: var(--display); font-weight: 700; font-size: 32px; letter-spacing: -0.01em; margin: 0; }
 .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
 .meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
@@ -708,6 +733,18 @@ a.ev:hover { background: var(--bg); }
           <g class="p-hearts"><path d="M54 10 c0-2 2.6-2.6 3.2-.8 c.6-1.8 3.2-1.2 3.2.8 c0 1.8-3.2 3.8-3.2 3.8 s-3.2-2-3.2-3.8z" /><path d="M8 6 c0-1.5 2-2 2.4-.6 c.4-1.4 2.4-1 2.4.6 c0 1.4-2.4 2.9-2.4 2.9 s-2.4-1.5-2.4-2.9z" /></g>
         </svg>
       </button></h1>
+    </div>
+    <div class="reel" id="reel" hidden>
+      <div class="reel-track" id="reel-track" aria-label="Photos"></div>
+      <button class="reel-edit" id="reel-edit" type="button" aria-label="Edit photos" title="Edit photos">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5.5h2l1.2-1.8h4.6l1.2 1.8h2v7.5h-11z"/><circle cx="8" cy="9" r="2.3"/></svg>
+      </button>
+      <div class="reel-pop" id="reel-pop" hidden>
+        <div class="reel-pop-head"><span id="reel-pop-title">Photos</span><button type="button" class="road-x" id="reel-pop-x" aria-label="Close">×</button></div>
+        <div class="reel-grid" id="reel-grid"></div>
+        <div class="reel-pop-foot"><button type="button" class="ev-save" id="reel-add">+ Add photos</button><span class="reel-msg" id="reel-msg"></span></div>
+      </div>
+      <input type="file" id="reel-file" accept="image/*" multiple hidden>
     </div>
     <div class="meta">
       <div class="meta-row">
@@ -2727,11 +2764,129 @@ a.ev:hover { background: var(--bg); }
   }
   window.addEventListener("beforeunload", function (e) { if (Object.keys(meetUp).length) { e.preventDefault(); e.returnValue = ""; } });
 
+
+  // ---------- header photo carousel (team only): 3 cards, one step left every few seconds ----------
+  var photos = null, photosUnsub = null, reelPos = 0, reelTimer = 0, reelCards = [], reelBusy = false;
+  var REEL_MS = 4200;
+  function photosRef() { return col.firestore.collection("headerPhotos"); }
+  function startPhotos() {
+    stopPhotos();
+    photosUnsub = photosRef().onSnapshot(function (snap) {
+      var before = photos ? photos.map(function (p) { return p.id; }).join() : null;
+      photos = snap.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); }).sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+      $("reel").hidden = false;
+      renderReelGrid();
+      if (photos.map(function (p) { return p.id; }).join() !== before) resetReel();
+    }, function () { stopPhotos(); });   // not on the team list: no carousel
+  }
+  function stopPhotos() {
+    if (photosUnsub) { try { photosUnsub(); } catch (e) {} }
+    photosUnsub = null; photos = null; clearInterval(reelTimer); reelTimer = 0;
+    $("reel").hidden = true; $("reel-track").innerHTML = ""; reelCards = [];
+  }
+  function reelStep() { return $("reel-track").clientWidth ? (reelCards[0] ? reelCards[0].el.offsetWidth : 96) + 10 : 106; }
+  function placeCard(c) { c.el.style.transform = "translateX(" + (c.slot * reelStep()) + "px)"; }
+  function makeCard(p, slot) {
+    var el = document.createElement("div"); el.className = "reel-card";
+    var img = document.createElement("img"); img.src = p.url; img.alt = ""; img.decoding = "async"; img.loading = "eager";
+    el.appendChild(img);
+    var c = { el: el, slot: slot }; placeCard(c);
+    $("reel-track").appendChild(el);
+    return c;
+  }
+  function resetReel() {
+    clearInterval(reelTimer); reelTimer = 0; reelBusy = false;
+    var track = $("reel-track"); track.innerHTML = ""; reelCards = [];
+    if (!photos || !photos.length) {
+      if (canEdit) { var b = document.createElement("button"); b.type = "button"; b.className = "reel-empty"; b.textContent = "+ Add photos"; b.addEventListener("click", function () { $("reel-file").click(); }); track.appendChild(b); }
+      return;
+    }
+    var n = Math.min(3, photos.length);
+    reelPos = reelPos % photos.length;
+    for (var i = 0; i < n; i++) reelCards.push(makeCard(photos[(reelPos + i) % photos.length], i));
+    if (photos.length > 3) reelTimer = setInterval(advanceReel, REEL_MS);
+  }
+  function advanceReel() {
+    if (reelBusy || document.hidden || $("reel").matches(":hover") || !$("reel-pop").hidden) return;
+    reelBusy = true;
+    var next = photos[(reelPos + 3) % photos.length];
+    var incoming = makeCard(next, 3); incoming.el.classList.add("gone");
+    var go = function () {
+      reelCards.forEach(function (c) { c.slot -= 1; placeCard(c); });
+      reelCards[0].el.classList.add("gone");   // left card fades as it slides out
+      incoming.slot = 2; placeCard(incoming); incoming.el.classList.remove("gone");   // new card fades in from the right
+      var leaving = reelCards.shift(); reelCards.push(incoming);
+      setTimeout(function () { leaving.el.remove(); reelPos = (reelPos + 1) % photos.length; reelBusy = false; }, 950);
+    };
+    var im = incoming.el.querySelector("img");
+    var start = function () { requestAnimationFrame(function () { requestAnimationFrame(go); }); };
+    if (im.complete) start(); else { im.onload = start; im.onerror = start; }
+  }
+  window.addEventListener("resize", function () { reelCards.forEach(placeCard); });
+  // edit popover: see all photos, remove, add more
+  function renderReelGrid() {
+    var g = $("reel-grid"); g.innerHTML = "";
+    (photos || []).forEach(function (p) {
+      var t = document.createElement("div"); t.className = "t";
+      t.innerHTML = '<img alt="" loading="lazy"><button type="button" aria-label="Remove photo">×</button>';
+      t.querySelector("img").src = p.url; t.querySelector("button").dataset.id = p.id;
+      g.appendChild(t);
+    });
+    if (!photos || !photos.length) g.innerHTML = '<div class="none">No photos yet.</div>';
+    $("reel-pop-title").textContent = "Photos · " + ((photos && photos.length) || 0);
+  }
+  $("reel-edit").addEventListener("click", function () { var p = $("reel-pop"); p.hidden = !p.hidden; $("reel").classList.toggle("editing", !p.hidden); $("reel-msg").textContent = ""; });
+  $("reel-pop-x").addEventListener("click", function () { $("reel-pop").hidden = true; $("reel").classList.remove("editing"); });
+  document.addEventListener("click", function (e) { if (!$("reel-pop").hidden && !e.target.closest("#reel")) { $("reel-pop").hidden = true; $("reel").classList.remove("editing"); } });
+  $("reel-add").addEventListener("click", function () { $("reel-file").value = ""; $("reel-file").click(); });
+  $("reel-grid").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-id]"); if (!b || !canEdit) return;
+    var p = (photos || []).filter(function (x) { return x.id === b.dataset.id; })[0]; if (!p) return;
+    photosRef().doc(p.id).delete().catch(denied);
+    try { firebase.storage().ref(p.path).delete().catch(function () {}); } catch (x) {}
+  });
+  function shrinkPhoto(file) {   // long side 480px, JPEG: about 30-60 KB each, so the header loads fast
+    return new Promise(function (res, rej) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var max = 480, k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        var w = Math.round(img.naturalWidth * k), h = Math.round(img.naturalHeight * k);
+        var cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+        cv.getContext("2d").drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        cv.toBlob(function (b) { b ? res({ blob: b, w: w, h: h }) : rej(new Error("shrink")); }, "image/jpeg", 0.74);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); rej(new Error("That image type can't be read here.")); };
+      img.src = url;
+    });
+  }
+  $("reel-file").addEventListener("change", function () {
+    var files = Array.prototype.slice.call(this.files || []).filter(function (f) { return /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|heic)$/i.test(f.name); });
+    if (!files.length || !canEdit) return;
+    var st; try { st = firebase.storage(); } catch (e) { $("reel-msg").textContent = "Photo storage isn't available."; return; }
+    var done = 0, failed = 0;
+    $("reel-pop").hidden = false; $("reel").classList.add("editing");
+    var msg = function () { $("reel-msg").textContent = "Adding " + Math.min(done + failed + 1, files.length) + " of " + files.length + "…"; };
+    msg();
+    files.reduce(function (chain, f, i) {
+      return chain.then(function () {
+        return shrinkPhoto(f).then(function (s) {
+          var ref = photosRef().doc(), path = "photos/" + ref.id + ".jpg";
+          return st.ref(path).put(s.blob, { contentType: "image/jpeg", cacheControl: "public, max-age=31536000" }).then(function (snap) { return snap.ref.getDownloadURL(); }).then(function (url) {
+            return ref.set({ path: path, url: url, w: s.w, h: s.h, createdAt: Date.now() + i, by: (user && user.email) || "" });
+          });
+        }).then(function () { done++; msg(); }, function () { failed++; msg(); });
+      });
+    }, Promise.resolve()).then(function () {
+      $("reel-msg").textContent = done + " added" + (failed ? ", " + failed + " couldn't be read (try JPG or PNG)" : "") + ".";
+    });
+  });
+
   auth.onAuthStateChanged(function (u) {
     user = u;
     canEdit = !!u;   // the database rules have the final say; a refused write shows a message
     setEditMode();
-    if (u) { startMail(); startMusic(); startCal(); startRoad(); startMeet(); } else { stopMail(); stopMusic(); stopCal(); stopRoad(); stopMeet(); }
+    if (u) { startMail(); startMusic(); startCal(); startRoad(); startMeet(); startPhotos(); } else { stopMail(); stopMusic(); stopCal(); stopRoad(); stopMeet(); stopPhotos(); }
   });
 })();
 </script>
