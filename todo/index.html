@@ -1863,6 +1863,35 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
     if (!f || f.songId !== songId || (!songAudio.currentTime && songAudio.paused)) return null;
     return { m: Math.round(songAudio.currentTime * 10) / 10, f: f.id };
   }
+  // drag a flag along the waveform to move its marker
+  var markDrag = null;
+  function markAt(cv, f, e) {   // which marker (to-do index) is under the pointer, or -1
+    var sg = findSong(f.songId), r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, best = -1, bd = e.pointerType === "mouse" ? 6 : 12;
+    if (!sg || !f.duration) return -1;
+    (sg.todos || []).forEach(function (td, i) {
+      if (td.m == null || td.f !== f.id) return;
+      var mx = td.m / f.duration * r.width, d = Math.abs(px - mx);
+      if (py < 10 && px >= mx - 2 && px <= mx + 11) d = 0;   // the little flag itself
+      if (d <= bd) { bd = d; best = i; }
+    });
+    return best;
+  }
+  function dragMarkTo(e) {
+    var d = markDrag, sg = findSong(d.songId); if (!sg || !sg.todos || !sg.todos[d.i]) return;
+    var t = Math.round(waveFrac(d.cv, e) * (d.f.duration || 0) * 10) / 10;
+    sg.todos[d.i] = Object.assign({}, sg.todos[d.i], { m: t });
+    d.moved = true;
+    drawWave(d.cv);
+    var tag = songsBox.querySelector('.song[data-id="' + d.songId + '"] .sx-item[data-i="' + d.i + '"] .sx-flag');
+    if (tag) tag.innerHTML = FLAG + mmss(t);
+  }
+  function dropMark() {
+    var d = markDrag; markDrag = null;
+    d.cv.style.cursor = ""; document.body.classList.remove("moving-song");
+    if (d.moved) saveSong(d.songId, { todos: songTodos(d.songId) });
+    else { var td = (findSong(d.songId).todos || [])[d.i]; if (td) seekTo(d.f, td.m / (d.f.duration || 1), true); }   // a tap on a flag plays from it
+    songRenderQueued = false; renderSongs();
+  }
   function setMark(id, i, m, fileId) {
     var todos = songTodos(id); if (!todos[i]) return;
     todos[i].m = Math.max(0, Math.round(m * 10) / 10); todos[i].f = fileId; todos[i].c = nextMarkColor(todos);
@@ -1930,7 +1959,7 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
     }
   });
   function renderSongs() {
-    if (songDrag || waveDrag || cardMove) { songRenderQueued = true; return; }
+    if (songDrag || waveDrag || cardMove || markDrag) { songRenderQueued = true; return; }
     var box = $("songs");
     var active = document.activeElement, keep = null;
     if (active && active.closest && active.closest("#songs .song") && (active.classList.contains("song-title") || active.dataset.k)) keep = { id: active.closest(".song").dataset.id, sel: active.classList.contains("song-title") ? ".song-title" : '[data-k="' + active.dataset.k + '"]', value: active.value, start: active.selectionStart, end: active.selectionEnd };
@@ -2242,17 +2271,24 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
     e.preventDefault(); cv.setPointerCapture && cv.setPointerCapture(e.pointerId);
     var f = fileById(cv.dataset.file); if (!f) return;
     if (markPick && markPick.id === f.songId) { setMark(f.songId, markPick.i, waveFrac(cv, e) * (f.duration || 0), f.id); return; }
+    var hitI = markAt(cv, f, e);
+    if (hitI >= 0 && canEdit) { markDrag = { cv: cv, f: f, songId: f.songId, i: hitI }; cv.style.cursor = "grabbing"; document.body.classList.add("moving-song"); return; }
     waveDrag = { cv: cv, f: f, wasPlaying: playingFile === f.id && !songAudio.paused };
     songAudio.pause();
     seekTo(f, waveFrac(cv, e), false);
   });
   songsBox.addEventListener("pointermove", function (e) {
     var cv = e.target.closest(".sa-wave");
+    if (markDrag) { dragMarkTo(e); return; }
     if (waveDrag) { seekTo(waveDrag.f, waveFrac(waveDrag.cv, e), false); return; }
-    if (cv && e.pointerType === "mouse") { waveHover = { file: cv.dataset.file, x: waveFrac(cv, e) }; drawWave(cv); }
+    if (cv && e.pointerType === "mouse") {
+      waveHover = { file: cv.dataset.file, x: waveFrac(cv, e) }; drawWave(cv);
+      var hf = fileById(cv.dataset.file); cv.style.cursor = hf && canEdit && markAt(cv, hf, e) >= 0 ? "grab" : "";
+    }
   });
   songsBox.addEventListener("pointerleave", function () { if (waveHover) { waveHover = null; drawAllWaves(); } }, true);
   document.addEventListener("pointerup", function (e) {
+    if (markDrag) { dropMark(); return; }
     if (!waveDrag) return;
     var d = waveDrag; waveDrag = null;
     seekTo(d.f, waveFrac(d.cv, e), true);   // let go: play from there
