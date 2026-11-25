@@ -565,6 +565,28 @@ a.ev:hover { background: var(--bg); }
 .songs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 14px; }
 .song { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 12px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .song.done { border-color: var(--accent); }
+/* per-song mini to-do list and notes */
+.song-extra { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
+.sx-lab { display: flex; justify-content: space-between; font: 600 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.sx-list { display: flex; flex-direction: column; }
+.sx-item { display: flex; align-items: center; gap: 8px; min-height: 28px; border-radius: 6px; padding: 0 2px; }
+.sx-item:hover { background: var(--bg); }
+.sx-check { flex: none; width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--muted); background: none; display: grid; place-items: center; cursor: pointer; padding: 0; transition: background .15s, border-color .15s; }
+.sx-check svg { width: 11px; height: 11px; fill: none; stroke: var(--sheet); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transform: scale(.4); transition: opacity .15s, transform .2s cubic-bezier(.3, 1.6, .5, 1); }
+.sx-item.done .sx-check { background: var(--accent); border-color: var(--accent); }
+.sx-item.done .sx-check svg { opacity: 1; transform: none; }
+.sx-text { flex: 1; min-width: 0; border: 0; background: none; color: var(--ink); font: 14px var(--body); padding: 4px 2px; border-radius: 4px; }
+.sx-text:focus { outline: 2px solid var(--accent); outline-offset: -1px; background: var(--bg); }
+.sx-item.done .sx-text { color: var(--muted); text-decoration: line-through; }
+.sx-x { flex: none; border: 0; background: none; color: var(--muted); font-size: 16px; line-height: 1; padding: 0 4px; cursor: pointer; opacity: 0; transition: opacity .15s; }
+.sx-item:hover .sx-x, .sx-x:focus-visible { opacity: 1; }
+.sx-x:hover { color: var(--danger); }
+.sx-new { border: 0; border-bottom: 1px dashed var(--line); background: none; color: var(--ink); font: 13.5px var(--body); padding: 5px 2px; }
+.sx-new::placeholder { color: var(--muted); }
+.sx-new:focus { outline: none; border-bottom-color: var(--accent); }
+.sx-notes { width: 100%; box-sizing: border-box; min-height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: 13.5px/1.45 var(--body); padding: 7px 9px; resize: none; overflow: hidden; }
+.sx-notes:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+@media (hover: none) { .sx-x { opacity: .6; } }
 .song-top { display: flex; align-items: flex-start; gap: 6px; }
 .song-title { flex: 1; min-width: 0; display: block; border: 0; background: transparent; color: var(--ink); font: 700 18px/1.3 var(--display); padding: 4px 4px; margin-left: -4px; border-radius: 6px; resize: none; overflow: hidden; height: 32px; }
 .song-title:hover:not(:focus) { background: var(--bg); }
@@ -1723,13 +1745,86 @@ a.ev:hover { background: var(--bg); }
     card.appendChild(labels);
     paintStage(card, Math.max(0, Math.min(6, sg.stage || 0)));
     card.appendChild(songAudioEl(sg));
+    card.appendChild(songExtraEl(sg));
     return card;
   }
+  var CHECK = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.2 5 8.5l4.5-5"/></svg>';
+  function songExtraEl(sg) {
+    var wrap = document.createElement("div"); wrap.className = "song-extra";
+    var todos = Array.isArray(sg.todos) ? sg.todos : [], done = todos.filter(function (x) { return x.d; }).length;
+    var lab = document.createElement("div"); lab.className = "sx-lab";
+    lab.innerHTML = "<span>To-do</span><span>" + (todos.length ? done + "/" + todos.length : "") + "</span>";
+    wrap.appendChild(lab);
+    var list = document.createElement("div"); list.className = "sx-list";
+    todos.forEach(function (td, i) {
+      var row = document.createElement("div"); row.className = "sx-item" + (td.d ? " done" : ""); row.dataset.i = i;
+      row.innerHTML = '<button type="button" class="sx-check" role="checkbox" aria-checked="' + (td.d ? "true" : "false") + '" aria-label="Done">' + CHECK + '</button>' +
+        '<input class="sx-text" type="text" maxlength="200" aria-label="To-do"><button type="button" class="sx-x" aria-label="Remove to-do">×</button>';
+      var inp = row.querySelector(".sx-text"); inp.value = td.t || ""; inp.dataset.k = "t" + i;
+      if (!canEdit) { inp.readOnly = true; row.querySelector(".sx-x").remove(); }
+      list.appendChild(row);
+    });
+    wrap.appendChild(list);
+    if (canEdit) {
+      var nw = document.createElement("input"); nw.className = "sx-new"; nw.type = "text"; nw.maxLength = 200; nw.placeholder = "+ Add a to-do"; nw.dataset.k = "new"; nw.setAttribute("aria-label", "Add a to-do for this song");
+      wrap.appendChild(nw);
+    }
+    var notes = document.createElement("textarea"); notes.className = "sx-notes"; notes.rows = 1; notes.maxLength = 5000; notes.placeholder = "Notes…"; notes.dataset.k = "notes";
+    notes.value = sg.notes || ""; notes.setAttribute("aria-label", "Notes for " + (sg.title || "song")); if (!canEdit) notes.readOnly = true;
+    wrap.appendChild(notes);
+    return wrap;
+  }
+  function songTodos(id) { var sg = findSong(id); return (sg && Array.isArray(sg.todos) ? sg.todos : []).map(function (x) { return { t: x.t || "", d: !!x.d }; }); }
+  function growNotes(ta) { ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 2) + "px"; }
+  var notesT = {};
+  $("songs").addEventListener("input", function (e) {
+    if (!e.target.classList.contains("sx-notes")) return;
+    var id = e.target.closest(".song").dataset.id, v = e.target.value;
+    growNotes(e.target);
+    clearTimeout(notesT[id]);
+    notesT[id] = setTimeout(function () { delete notesT[id]; saveSong(id, { notes: v.slice(0, 5000) }); }, 600);
+  });
+  $("songs").addEventListener("keydown", function (e) {
+    var el = e.target; if (!el.classList) return;
+    if (el.classList.contains("sx-new") && e.key === "Enter") {
+      e.preventDefault();
+      var v = el.value.trim(); if (!v) return;
+      var id = el.closest(".song").dataset.id, todos = songTodos(id);
+      if (todos.length >= 50) return;
+      todos.push({ t: v.slice(0, 200), d: false });
+      el.value = "";
+      saveSong(id, { todos: todos }); renderSongs();
+      var again = songsBox.querySelector('.song[data-id="' + id + '"] .sx-new'); if (again) again.focus();
+    }
+    if (el.classList.contains("sx-text") && (e.key === "Enter" || e.key === "Escape")) { e.preventDefault(); if (e.key === "Escape") el.value = (songTodos(el.closest(".song").dataset.id)[+el.closest(".sx-item").dataset.i] || {}).t || ""; el.blur(); }
+  });
+  $("songs").addEventListener("focusout", function (e) {
+    var el = e.target;
+    if (el.classList && el.classList.contains("sx-text")) {
+      var id = el.closest(".song").dataset.id, i = +el.closest(".sx-item").dataset.i, todos = songTodos(id), v = el.value.trim();
+      if (!todos[i] || todos[i].t === v) return;
+      if (v) todos[i].t = v.slice(0, 200); else todos.splice(i, 1);   // emptied out: remove it
+      saveSong(id, { todos: todos }); setTimeout(renderSongs, 0);
+    }
+  });
+  $("songs").addEventListener("click", function (e) {
+    var row = e.target.closest(".sx-item"); if (!row || !canEdit) return;
+    var id = row.closest(".song").dataset.id, i = +row.dataset.i, todos = songTodos(id);
+    if (!todos[i]) return;
+    if (e.target.closest(".sx-check")) {
+      todos[i].d = !todos[i].d;
+      row.classList.toggle("done", todos[i].d); row.querySelector(".sx-check").setAttribute("aria-checked", todos[i].d ? "true" : "false");
+      saveSong(id, { todos: todos });
+      setTimeout(renderSongs, 260);   // let the check pop first
+    } else if (e.target.closest(".sx-x")) {
+      todos.splice(i, 1); saveSong(id, { todos: todos }); renderSongs();
+    }
+  });
   function renderSongs() {
     if (songDrag || waveDrag) { songRenderQueued = true; return; }
     var box = $("songs");
     var active = document.activeElement, keep = null;
-    if (active && active.classList && active.classList.contains("song-title")) keep = { id: active.closest(".song").dataset.id, value: active.value, start: active.selectionStart, end: active.selectionEnd };
+    if (active && active.closest && active.closest("#songs .song") && (active.classList.contains("song-title") || active.dataset.k)) keep = { id: active.closest(".song").dataset.id, sel: active.classList.contains("song-title") ? ".song-title" : '[data-k="' + active.dataset.k + '"]', value: active.value, start: active.selectionStart, end: active.selectionEnd };
     box.innerHTML = "";
     var list = sortedSongs();
     list.forEach(function (sg) { box.appendChild(songCard(sg)); });
@@ -1737,10 +1832,11 @@ a.ev:hover { background: var(--bg); }
     var open = list.filter(function (x) { return (x.stage || 0) < 6; }).length;
     $("tab-music-n").textContent = open || "";
     Array.prototype.forEach.call(box.querySelectorAll(".song-title"), grow);
+    Array.prototype.forEach.call(box.querySelectorAll(".sx-notes"), growNotes);
     drawAllWaves();
     if (keep) {
-      var el = box.querySelector('.song[data-id="' + keep.id + '"] .song-title');
-      if (el) { el.value = keep.value; el.focus(); try { el.setSelectionRange(keep.start, keep.end); } catch (e) {} grow(el); }
+      var el = box.querySelector('.song[data-id="' + keep.id + '"] ' + keep.sel);
+      if (el) { el.value = keep.value; el.focus(); try { el.setSelectionRange(keep.start, keep.end); } catch (e) {} if (el.classList.contains("song-title")) grow(el); }
     }
   }
   function findSong(id) { return (songs || []).filter(function (x) { return x.id === id; })[0]; }
