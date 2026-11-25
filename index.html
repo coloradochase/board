@@ -230,6 +230,9 @@ function fetchCalendar() {
       data = json; lastOk = Date.now(); lastError = '';
       store('boardCache', JSON.stringify(json));
       render(); renderMail(); updateStatus();
+      // New photos in the folder (or the first time we learn about them): show one right away.
+      var pk = (json.photos || []).slice().sort().join(',');
+      if (pk && pk !== photoKey) nextPhoto();
     })
     .catch(function (err) {
       lastError = err && err.message ? err.message : 'Could not reach calendar.';
@@ -331,10 +334,17 @@ function updateStatus() {
 
 // ----- Background photos -----
 var showingA = false;
-function nextPhoto() {
+// Your own photos come from the "TV Photos" folder in Google Drive, through the calendar
+// script (already shrunk to TV size). With no photos in the folder, random ones are used.
+var photoOrder = [], photoIdx = 0, photoKey = '';
+
+function randomPhotoSrc() {
   var w = Math.min(2560, Math.round(screen.width * (window.devicePixelRatio || 1))) || 1920;
   var h = Math.round(w * 9 / 16);
-  var src = 'https://picsum.photos/' + w + '/' + h + '?random=' + Date.now();
+  return 'https://picsum.photos/' + w + '/' + h + '?random=' + Date.now();
+}
+
+function showPhoto(src) {
   var img = new Image();
   img.onload = function () {
     var next = document.getElementById(showingA ? 'bgB' : 'bgA');
@@ -345,6 +355,28 @@ function nextPhoto() {
     showingA = !showingA;
   };
   img.src = src;
+}
+
+function nextPhoto() {
+  var ids = (data && data.photos) || [];
+  if (!ids.length || DEMO || !TOKEN || API_URL.indexOf('http') !== 0) { showPhoto(randomPhotoSrc()); return; }
+  var key = ids.slice().sort().join(',');
+  if (key !== photoKey || photoIdx >= photoOrder.length) {
+    photoKey = key; photoIdx = 0;
+    photoOrder = ids.slice();
+    for (var i = photoOrder.length - 1; i > 0; i--) {   // shuffle, then show each once before repeating
+      var j = Math.floor(Math.random() * (i + 1)), t = photoOrder[i];
+      photoOrder[i] = photoOrder[j]; photoOrder[j] = t;
+    }
+  }
+  var id = photoOrder[photoIdx++];
+  fetch(API_URL + '?token=' + encodeURIComponent(TOKEN) + '&photo=' + encodeURIComponent(id), { redirect: 'follow' })
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      if (!j || !j.image) throw new Error((j && j.error) || 'no image');
+      showPhoto('data:' + (j.type || 'image/jpeg') + ';base64,' + j.image);
+    })
+    .catch(function () { showPhoto(randomPhotoSrc()); });
 }
 
 // ----- Demo data (open the page with #demo to preview) -----
