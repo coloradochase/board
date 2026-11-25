@@ -480,7 +480,7 @@ function unlockSound() {
   } catch (e) { audioCtx = null; }
   document.getElementById('soundnote').hidden = true;
   ding();
-  say('Spoken alerts are on');
+  speakOut('Spoken alerts are on');
   showBanner('Alerts are on', 'Meetings are announced ' + ALERT_MINUTES + ' minutes before', 6000);
 }
 ['keydown', 'click', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, unlockSound); });
@@ -521,13 +521,40 @@ function showBanner(title, sub, ms) {
   bannerTimer = setTimeout(function () { document.getElementById('alert').hidden = true; }, ms || 90000);
 }
 
+// The voice comes from the calendar script (Gemini text-to-speech) as an audio clip, since
+// Silk on Fire TV has no built-in voice. If that fails, the browser's own voice is tried.
+function speakOut(text) {
+  var line = spoken(text), started = Date.now();
+  function after(fn) { setTimeout(fn, Math.max(0, 1400 - (Date.now() - started))); }   // let the ding finish first
+  if (!TOKEN || API_URL.indexOf('http') !== 0 || !audioCtx) { after(function () { say(line); }); return; }
+  fetch(API_URL + '?token=' + encodeURIComponent(TOKEN) + '&say=' + encodeURIComponent(line), { redirect: 'follow' })
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      if (!j || !j.audio) throw new Error((j && j.error) || 'no audio');
+      after(function () { playPcm(j.audio, j.rate || 24000); });
+    })
+    .catch(function () { after(function () { say(line); }); });
+}
+
+// Gemini sends raw 16-bit mono PCM; turn it into sound.
+function playPcm(b64, rate) {
+  try {
+    var bin = atob(b64), n = bin.length >> 1;
+    var buf = audioCtx.createBuffer(1, n, rate), ch = buf.getChannelData(0);
+    for (var i = 0; i < n; i++) {
+      var v = bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8);
+      ch[i] = (v >= 32768 ? v - 65536 : v) / 32768;
+    }
+    var src = audioCtx.createBufferSource();
+    src.buffer = buf; src.connect(audioCtx.destination); src.start();
+  } catch (e) {}
+}
+
 function announce(title, mins, time) {
   showBanner(title, 'In ' + mins + ' min \u00b7 ' + time);
   if (!soundOn) return;
   ding();
-  setTimeout(function () {
-    say(spoken(title + ' in ' + mins + (mins === 1 ? ' minute' : ' minutes') + ', at ' + time));
-  }, 1400);
+  speakOut(title + ' in ' + mins + (mins === 1 ? ' minute' : ' minutes') + ', at ' + time);
 }
 
 function checkAlerts() {
