@@ -426,6 +426,31 @@ body:not([data-tab="meetings"]) .meet { display: none; }
 .meet-top span { flex: 1; }
 .meet-new { font: 600 13px var(--body); color: var(--sheet); background: var(--accent); border: 0; border-radius: 999px; padding: 8px 16px; cursor: pointer; }
 .meet-new:hover { filter: brightness(1.08); }
+.meet-rec { display: inline-flex; align-items: center; gap: 7px; font: 600 13px var(--body); color: var(--ink); background: var(--sheet); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.meet-rec i { width: 9px; height: 9px; border-radius: 50%; background: #e5484d; }
+.meet-rec:hover { border-color: #e5484d; }
+.meet-rec[disabled] { opacity: .45; cursor: default; }
+.rec-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; animation: ph-in .18s ease-out; }
+.rec-pick button { text-align: left; display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--sheet); color: var(--ink); cursor: pointer; font: 14px var(--body); }
+.rec-pick button:hover { border-color: #e5484d; }
+.rec-pick b { font-weight: 600; }
+.rec-pick span { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+.rec-pick p { grid-column: 1 / -1; margin: 0; font-size: 12px; color: var(--muted); }
+@media (max-width: 600px) { .rec-pick { grid-template-columns: 1fr; } }
+.rec-bar { position: sticky; top: 8px; z-index: 15; display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 14px; border-radius: 14px; background: var(--sheet); border: 1.5px solid #e5484d; box-shadow: 0 8px 24px rgba(229,72,77,.18); animation: ph-in .2s ease-out; }
+.rec-dot { flex: none; width: 12px; height: 12px; border-radius: 50%; background: #e5484d; animation: rec-pulse 1.4s ease-in-out infinite; }
+@keyframes rec-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(229,72,77,.55); } 50% { box-shadow: 0 0 0 7px rgba(229,72,77,0); } }
+.rec-time { font: 600 15px var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); min-width: 52px; }
+.rec-level { flex: none; display: flex; align-items: center; gap: 2px; height: 20px; }
+.rec-level i { width: 3px; height: 4px; border-radius: 2px; background: #e5484d; transition: height .08s; }
+.rec-what { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rec-sp { flex: 1; }
+.rec-msg { font-size: 13.5px; color: var(--danger); background: var(--sheet); border: 1px solid var(--danger); border-radius: 10px; padding: 9px 12px; }
+.rec-stop { font: 600 13px var(--body); color: #fff; background: #e5484d; border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer; white-space: nowrap; }
+.rec-stop:hover { filter: brightness(1.08); }
+#tabs button.rec-on::after { content: ""; display: inline-block; width: 7px; height: 7px; margin-left: 6px; border-radius: 50%; background: #e5484d; vertical-align: middle; animation: rec-pulse 1.4s ease-in-out infinite; }
+@media (max-width: 600px) { .rec-what { display: none; } .rec-bar #rec-cancel { padding: 5px 10px; } }
+@media (prefers-reduced-motion: reduce) { .rec-dot, #tabs button.rec-on::after { animation: none; } }
 .meet-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 18px 14px; border: 1.5px dashed var(--line); border-radius: 12px; color: var(--muted); font-size: 14px; cursor: pointer; transition: border-color .12s, background .12s, color .12s; }
 .meet-drop b { color: var(--ink); font-weight: 600; }
 .meet-drop small { font: 11px var(--mono); letter-spacing: .04em; }
@@ -928,7 +953,20 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
   </section>
 
   <section class="meet" id="meet" aria-label="Meetings" hidden>
-    <div class="meet-top"><h2>Meetings</h2><span></span><button class="meet-new" id="meet-new" type="button">+ New meeting</button></div>
+    <div class="meet-top"><h2>Meetings</h2><span></span><button class="meet-rec" id="meet-rec" type="button"><i></i>Record</button><button class="meet-new" id="meet-new" type="button">+ New meeting</button></div>
+    <div class="rec-pick" id="rec-pick" hidden>
+      <button type="button" data-mode="tab"><b>A call in a Chrome tab</b><span>Google Meet, Zoom or Teams in the browser. Records both sides plus your mic.</span></button>
+      <button type="button" data-mode="mic"><b>Microphone only</b><span>In-person meetings, or a call on speakerphone.</span></button>
+      <p>Headphones give the cleanest call recordings. Let people know you're recording.</p>
+    </div>
+    <div class="rec-bar" id="rec-bar" hidden>
+      <span class="rec-dot"></span><span class="rec-time" id="rec-time">0:00</span>
+      <span class="rec-level" id="rec-level"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="rec-what" id="rec-what"></span><span class="rec-sp"></span>
+      <button type="button" class="meet-btn" id="rec-cancel">Discard</button>
+      <button type="button" class="rec-stop" id="rec-stop">Stop &amp; summarize</button>
+    </div>
+    <div class="rec-msg" id="rec-msg" hidden></div>
     <div class="meet-drop" id="meet-drop-new" tabindex="0" role="button"><b>Drop a recording to start a new meeting</b><span>or tap to choose a file</span><small>MP3 · M4A · WAV · AAC · OGG · FLAC</small></div>
     <input type="file" id="meet-file" accept="audio/*,.m4a,.mp3,.wav,.aac,.ogg,.oga,.opus,.flac,.webm,.aif,.aiff" hidden>
     <div id="meet-list"></div>
@@ -2736,6 +2774,7 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
     meetUnsub = null; meets = null; meetOK = false; updateTabs();
   }
   function meetChip(m) {
+    if (rec && rec.id === m.id) return ["Recording", "err"];
     if (meetUp[m.id]) return ["Uploading", "busy"];
     if (m.status === "processing") return ["Transcribing", "busy"];
     if (m.status === "error") return ["Needs attention", "err"];
@@ -2772,7 +2811,9 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
     q(".meet-peek").textContent = m.summary || (m.notes || "").split("\n")[0] || "";
     // status line
     var st = q(".meet-stat"), up = meetUp[m.id], html = "";
-    if (up) {
+    if (rec && rec.id === m.id) {
+      html = '<div>Recording now. Add notes while you talk, then hit <b>Stop &amp; summarize</b> up top.</div>';
+    } else if (up) {
       html = '<div>' + esc(up.msg) + '</div><div class="meet-bar"><i style="width:' + Math.round(up.pct * 100) + '%"></i></div><div class="hint">Keep this page open until the upload finishes.</div>';
     } else if (m.status === "processing") {
       var part = m.summaryDone && m.parts > 1 ? " (transcript part " + Math.min((m.progress || 0) + 1, m.parts) + " of " + m.parts + ")" : "";
@@ -2785,7 +2826,7 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
       html = '<div class="meet-row"><span class="hint">From ' + esc(m.audioName) + '</span><button type="button" class="meet-btn meet-replace">Replace recording</button></div>';
     }
     if (st.dataset.h !== html) { st.innerHTML = html; st.dataset.h = html; }
-    q(".meet-drop-one").hidden = !!up || m.status === "processing" || m.status === "done";
+    q(".meet-drop-one").hidden = !!up || m.status === "processing" || m.status === "done" || !!(rec && rec.id === m.id);
     // summary
     var sum = "";
     if (m.summary || (m.keyPoints && m.keyPoints.length) || (m.actionItems && m.actionItems.length)) {
@@ -2960,6 +3001,100 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
     })();
   }
   window.addEventListener("beforeunload", function (e) { if (Object.keys(meetUp).length) { e.preventDefault(); e.returnValue = ""; } });
+
+  // ---------- record a meeting right here: a call in a Chrome tab (both sides + mic) or just the mic ----------
+  var rec = null;
+  function recErr(msg) { var m = $("rec-msg"); m.textContent = msg; m.hidden = false; clearTimeout(recErr.t); recErr.t = setTimeout(function () { m.hidden = true; }, 9000); }
+  var canTab = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) && !/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  function recMime() {
+    var opts = ["audio/mp4;codecs=mp4a.40.2", "audio/mp4", "audio/webm;codecs=opus", "audio/webm"];
+    for (var i = 0; i < opts.length; i++) if (window.MediaRecorder && MediaRecorder.isTypeSupported(opts[i])) return opts[i];
+    return "";
+  }
+  $("meet-rec").addEventListener("click", function () {
+    if (rec) return;
+    if (!window.MediaRecorder || !navigator.mediaDevices) { recErr("This browser can't record. Try Chrome.", true); return; }
+    if (!canTab) { startRec("mic"); return; }
+    $("rec-pick").hidden = !$("rec-pick").hidden;
+  });
+  $("rec-pick").addEventListener("click", function (e) { var b = e.target.closest("button[data-mode]"); if (b) { $("rec-pick").hidden = true; startRec(b.dataset.mode); } });
+  function stopTracks(list) { (list || []).forEach(function (st) { if (st) st.getTracks().forEach(function (t) { try { t.stop(); } catch (x) {} }); }); }
+  function startRec(mode) {
+    var streams = [], tabStream = null;
+    var getTab = mode === "tab" ? navigator.mediaDevices.getDisplayMedia({
+      video: { displaySurface: "browser" }, audio: { suppressLocalAudioPlayback: false },
+      preferCurrentTab: false, selfBrowserSurface: "exclude", surfaceSwitching: "include", systemAudio: "include"
+    }).then(function (st) {
+      tabStream = st; streams.push(st);
+      st.getVideoTracks().forEach(function (t) { t.stop(); });   // only the sound is needed
+      if (!st.getAudioTracks().length) { stopTracks([st]); throw new Error("notabaudio"); }
+      return st;
+    }) : Promise.resolve(null);
+    getTab.then(function () {
+      return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }).then(function (mic) { streams.push(mic); return mic; }, function (err) {
+        if (mode === "mic") throw err;
+        return null;   // tab audio alone is still useful
+      });
+    }).then(function (mic) {
+      var AC = window.AudioContext || window.webkitAudioContext, ac = new AC(), dest = ac.createMediaStreamDestination(), an = ac.createAnalyser();
+      an.fftSize = 256;
+      streams.forEach(function (st) { if (st.getAudioTracks().length) { var src = ac.createMediaStreamSource(st); src.connect(dest); src.connect(an); } });
+      var mime = recMime();
+      var mr = new MediaRecorder(dest.stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : undefined);
+      var chunks = [];
+      mr.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      var now = new Date();
+      return newMeeting({ title: "", notes: "" }).then(function (id) {
+        rec = { id: id, mr: mr, chunks: chunks, ac: ac, an: an, streams: streams, start: Date.now(), mime: (mr.mimeType || mime || "audio/webm").split(";")[0], mode: mode, lock: null };
+        mr.start(5000);
+        if (tabStream) tabStream.getAudioTracks()[0].addEventListener("ended", function () { if (rec) stopRec(true); });   // "Stop sharing" ends it too
+        if (navigator.wakeLock) navigator.wakeLock.request("screen").then(function (l) { if (rec) rec.lock = l; }, function () {});
+        $("rec-what").textContent = mode === "tab" ? (mic ? "Call audio + your mic" : "Call audio only (mic blocked)") : "Microphone";
+        $("rec-bar").hidden = false; $("meet-rec").disabled = true;
+        document.querySelector('#tabs button[data-tab="meetings"]').classList.add("rec-on");
+        renderMeet(); recTick();
+      });
+    }).catch(function (err) {
+      stopTracks(streams);
+      var msg = err && err.message === "notabaudio" ? "No call audio came through. Pick the Meet tab under \"Chrome Tab\" and keep \"Also share tab audio\" on."
+        : err && err.name === "NotAllowedError" ? (mode === "mic" ? "Microphone access was blocked. Allow it in the address bar, then try again." : "Recording was cancelled.")
+        : "Couldn't start recording" + (err && err.message ? ": " + err.message : ".");
+      recErr(msg, true);
+    });
+  }
+  function recTick() {
+    if (!rec) return;
+    var t = Math.floor((Date.now() - rec.start) / 1000);
+    $("rec-time").textContent = (t >= 3600 ? Math.floor(t / 3600) + ":" + pad(Math.floor(t % 3600 / 60)) : Math.floor(t / 60)) + ":" + pad(t % 60);
+    var data = new Uint8Array(rec.an.frequencyBinCount); rec.an.getByteTimeDomainData(data);
+    var peak = 0; for (var i = 0; i < data.length; i++) peak = Math.max(peak, Math.abs(data[i] - 128));
+    var lvl = Math.min(1, peak / 70);
+    Array.prototype.forEach.call(document.querySelectorAll("#rec-level i"), function (b, k) { var w = [0.5, 0.8, 1, 0.9, 1, 0.7, 0.45][k]; b.style.height = Math.max(4, Math.round(20 * lvl * w * (0.75 + Math.random() * 0.25))) + "px"; });
+    setTimeout(function () { requestAnimationFrame(recTick); }, 80);
+  }
+  function stopRec(keep) {
+    if (!rec) return;
+    var r = rec; rec = null;
+    $("rec-bar").hidden = true; $("meet-rec").disabled = false;
+    document.querySelector('#tabs button[data-tab="meetings"]').classList.remove("rec-on");
+    try { if (r.lock) r.lock.release(); } catch (x) {}
+    var finish = function () {
+      stopTracks(r.streams); try { r.ac.close(); } catch (x) {}
+      if (!keep) { meetsRef().doc(r.id).delete().catch(denied); return; }
+      var blob = new Blob(r.chunks, { type: r.mime });
+      if (blob.size < 2000) { recErr("That recording was empty.", true); renderMeet(); return; }
+      var d = new Date(r.start), ext = /mp4/.test(r.mime) ? "m4a" : "webm";
+      var file = new File([blob], "Recording " + ymdLocal(d) + " " + pad(d.getHours()) + pad(d.getMinutes()) + "." + ext, { type: r.mime });
+      uploadAudio(r.id, file, r.mime);
+    };
+    if (r.mr.state !== "inactive") { r.mr.onstop = finish; try { r.mr.stop(); } catch (x) { finish(); } } else finish();
+  }
+  $("rec-stop").addEventListener("click", function () { stopRec(true); });
+  $("rec-cancel").addEventListener("click", function () {
+    if (rec && Date.now() - rec.start > 60000 && $("rec-cancel").textContent !== "Discard it?") { $("rec-cancel").textContent = "Discard it?"; setTimeout(function () { $("rec-cancel").textContent = "Discard"; }, 3000); return; }
+    $("rec-cancel").textContent = "Discard"; stopRec(false);
+  });
+  window.addEventListener("beforeunload", function (e) { if (rec) { e.preventDefault(); e.returnValue = ""; } });
 
 
   // ---------- header photo carousel (team only): 3 cards, one step left every few seconds ----------
