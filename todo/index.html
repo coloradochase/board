@@ -562,7 +562,7 @@ a.ev:hover { background: var(--bg); }
 
 /* Music: one block per song with a stage slider */
 .music { display: flex; flex-direction: column; gap: 16px; }
-.songs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 14px; }
+.songs { position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 14px; }
 .song { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 12px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .song.done { border-color: var(--accent); }
 /* moving song cards */
@@ -1966,17 +1966,19 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
   function moveTo(x, y) {
     var m = cardMove; m.x = x; m.y = y;
     m.card.style.left = (x - m.dx) + "px"; m.card.style.top = (y - m.dy) + "px";
-    var cards = movable(), hit = null, after = false;
+    // swap as soon as the lifted card covers half of another card (layout spots, so cards mid-glide don't count twice)
+    var box = songsBox.getBoundingClientRect(), L = x - m.dx, T = y - m.dy, W = m.card.offsetWidth, H = m.card.offsetHeight;
+    var cards = movable(), hit = null, best = 0;
     cards.forEach(function (c) {
-      var r = c.getBoundingClientRect();
-      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) { hit = c; after = x > r.left + r.width / 2; }
+      var cl = box.left + c.offsetLeft, ct = box.top + c.offsetTop, cw = c.offsetWidth, chh = c.offsetHeight;
+      var ox = Math.min(L + W, cl + cw) - Math.max(L, cl), oy = Math.min(T + H, ct + chh) - Math.max(T, ct);
+      if (ox <= 0 || oy <= 0) return;
+      var cover = (ox * oy) / Math.min(W * H, cw * chh);
+      if (cover >= 0.5 && cover > best) { best = cover; hit = c; }
     });
     if (!hit) return;
-    var key = hit.dataset.id + (after ? ">" : "<");
-    if (key === m.last) return;
+    var kids = Array.prototype.slice.call(songsBox.children), after = kids.indexOf(hit) > kids.indexOf(m.ph);
     var ref = after ? hit.nextSibling : hit;
-    if (ref === m.ph || (after && hit.nextSibling === m.ph) || (!after && hit.previousSibling === m.ph)) { m.last = key; return; }
-    m.last = key;
     flip(cards.concat([m.ph]), function () { songsBox.insertBefore(m.ph, ref); });
   }
   document.addEventListener("pointermove", function (e) {
