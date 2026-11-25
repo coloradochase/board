@@ -618,6 +618,13 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
 .sx-x { flex: none; border: 0; background: none; color: var(--muted); font-size: 16px; line-height: 1; padding: 0 4px; cursor: pointer; opacity: 0; transition: opacity .15s; }
 .sx-item:hover .sx-x, .sx-x:focus-visible { opacity: 1; }
 .sx-x:hover { color: var(--danger); }
+.sx-up { flex: none; width: 20px; height: 20px; border: 0; border-radius: 6px; background: none; color: var(--muted); padding: 0; cursor: pointer; display: grid; place-items: center; opacity: 0; transition: opacity .15s, color .15s, background .15s; }
+.sx-up svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.sx-item:hover .sx-up, .sx-up:focus-visible { opacity: 1; }
+.sx-up:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.sx-up.on { opacity: 1; color: var(--accent); cursor: default; background: none; }
+.sx-up.pop svg { animation: sxUpPop .4s ease; }
+@keyframes sxUpPop { 0% { transform: scale(.4); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
 .sx-new { border: 0; border-bottom: 1px dashed var(--line); background: none; color: var(--ink); font: 13.5px var(--body); padding: 5px 2px; }
 .sx-new::placeholder { color: var(--muted); }
 .sx-new:focus { outline: none; border-bottom-color: var(--accent); }
@@ -635,7 +642,7 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
 .sx-flag.pop { animation: mark-pop .35s cubic-bezier(.3, 1.6, .5, 1); }
 .sx-notes { width: 100%; box-sizing: border-box; min-height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: 13.5px/1.45 var(--body); padding: 7px 9px; resize: none; overflow: hidden; }
 .sx-notes:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-@media (hover: none) { .sx-x { opacity: .6; } }
+@media (hover: none) { .sx-x, .sx-up { opacity: .6; } }
 .song-top { display: flex; align-items: flex-start; gap: 6px; }
 .song-title { flex: 1; min-width: 0; display: block; border: 0; background: transparent; color: var(--ink); font: 700 18px/1.3 var(--display); padding: 4px 4px; margin-left: -4px; border-radius: 6px; resize: none; overflow: hidden; height: 32px; }
 .song-title:hover:not(:focus) { background: var(--bg); }
@@ -1534,6 +1541,7 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
     tasks = snap.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); });
     loaded = true;
     render();
+    refreshUps();
   }, function (e) {
     clearTimeout(timer);
     setStatus("Couldn't load the list (" + (e.code || "error") + "). Reload to try again.", true);
@@ -1830,9 +1838,9 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
       var tag = td.m != null ? '<button type="button" class="sx-flag' + (markPop === sg.id + ":" + i ? " pop" : "") + '" title="Play from here">' + FLAG + mmss(td.m) + '</button>'
         : (canEdit && versionsOf(sg.id).length ? '<button type="button" class="sx-mark' + (markPick && markPick.id === sg.id && markPick.i === i ? " on" : "") + '" title="Mark a time in the song">+</button>' : '');
       row.innerHTML = '<button type="button" class="sx-check" role="checkbox" aria-checked="' + (td.d ? "true" : "false") + '" aria-label="Done">' + CHECK + '</button>' +
-        '<input class="sx-text" type="text" maxlength="200" aria-label="To-do">' + tag + '<button type="button" class="sx-x" aria-label="Remove to-do">×</button>';
+        '<input class="sx-text" type="text" maxlength="200" aria-label="To-do">' + tag + upBtn(sg, td, i) + '<button type="button" class="sx-x" aria-label="Remove to-do">×</button>';
       var inp = row.querySelector(".sx-text"); inp.value = td.t || ""; inp.dataset.k = "t" + i;
-      if (!canEdit) { inp.readOnly = true; row.querySelector(".sx-x").remove(); }
+      if (!canEdit) { inp.readOnly = true; row.querySelector(".sx-x").remove(); var ub = row.querySelector(".sx-up"); if (ub) ub.remove(); }
       list.appendChild(row);
     });
     wrap.appendChild(list);
@@ -1844,6 +1852,33 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
     notes.value = sg.notes || ""; notes.setAttribute("aria-label", "Notes for " + (sg.title || "song")); if (!canEdit) notes.readOnly = true;
     wrap.appendChild(notes);
     return wrap;
+  }
+  // ---- send a song to-do to the main to-do list as "<to-do> on <song title>" ----
+  var LIST_PLUS = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h7M2 8h7M2 12h5M12.5 9v6M9.5 12h6"/></svg>';
+  var upPop = null;
+  function mainTitle(sg, td) { return (String(td.t || "").trim() + " on " + (String(sg.title || "").trim() || "Untitled song")).slice(0, 300); }
+  function onMainList(title) { return tasks.some(function (t) { return !t.done && t.title === title; }); }
+  function upBtn(sg, td, i) {
+    if (!String(td.t || "").trim() || td.d) return "";
+    var on = onMainList(mainTitle(sg, td));
+    return '<button type="button" class="sx-up' + (on ? " on" : "") + (upPop === sg.id + ":" + i ? " pop" : "") + '" title="' + (on ? "On your main to-do list" : "Add to main to-do list") + '" aria-label="' + (on ? "On your main to-do list" : "Add to main to-do list") + '">' + (on ? CHECK : LIST_PLUS) + '</button>';
+  }
+  function refreshUps() {   // the main list changed: redraw song rows whose check is now out of date
+    var stale = Array.prototype.some.call(document.querySelectorAll("#songs .sx-up"), function (b) {
+      var row = b.closest(".sx-item"), sg = findSong(b.closest(".song").dataset.id), td = sg && (sg.todos || [])[+row.dataset.i];
+      return td && b.classList.contains("on") !== onMainList(mainTitle(sg, td));
+    });
+    if (stale) renderSongs();
+  }
+  function sendToMain(sg, td, i) {
+    var title = mainTitle(sg, td); if (onMainList(title)) return;
+    var open = sorted().open, last = open.reduce(function (mx, x) { return Math.max(mx, x.order || 0); }, 0);
+    var t = { title: title, done: false, order: open.length ? last + 1000 : 1000, notes: ("From song: " + (sg.title || "Untitled") + (td.m != null ? " at " + mmss(td.m) : "")).slice(0, 5000), createdAt: Date.now() };
+    var ref = col.doc();
+    remember({ label: "add “" + t.title.slice(0, 40) + "”", undo: { type: "delete", id: ref.id }, redo: { type: "create", id: ref.id, data: t } });
+    runOp({ type: "create", id: ref.id, data: t });
+    tasks.push(Object.assign({ id: ref.id }, t));   // show the check right away; the snapshot catches up
+    upPop = sg.id + ":" + i; renderSongs(); setTimeout(function () { upPop = null; }, 450);
   }
   function songTodos(id) {
     var sg = findSong(id);
@@ -1942,6 +1977,7 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
       if (mf) { var swap = shownVersion(id) && shownVersion(id).id !== mf.id; songSel[id] = mf.id; if (swap) renderSongs(); seekTo(mf, todos[i].m / (mf.duration || 1), true); }
       return;
     }
+    if (e.target.closest(".sx-up")) { if (!e.target.closest(".sx-up").classList.contains("on")) sendToMain(findSong(id), todos[i], i); return; }
     if (e.target.closest(".sx-mark")) {
       var lm = liveMark(id);
       if (lm) { setMark(id, i, lm.m, lm.f); return; }
