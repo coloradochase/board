@@ -565,6 +565,18 @@ a.ev:hover { background: var(--bg); }
 .songs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 14px; }
 .song { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 12px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .song.done { border-color: var(--accent); }
+/* moving song cards */
+.song-grip { flex: none; width: 22px; height: 32px; margin-left: -8px; border: 0; background: none; color: var(--muted); cursor: grab; touch-action: none; display: grid; place-items: center; border-radius: 6px; opacity: .45; transition: opacity .15s, background .15s; }
+.song:hover .song-grip, .song-grip:focus-visible { opacity: 1; }
+.song-grip:hover { background: var(--bg); color: var(--ink); }
+.song-grip svg { width: 10px; height: 16px; fill: currentColor; }
+.song.lifted { position: fixed; z-index: 60; margin: 0; pointer-events: none; cursor: grabbing; box-shadow: 0 22px 48px rgba(0,0,0,.35), 0 0 0 2px var(--accent); transform: scale(1.035) rotate(-1.2deg); transition: transform .22s cubic-bezier(.3, 1.6, .5, 1), box-shadow .22s; }
+.song.lifted.settle { transform: none; box-shadow: 0 2px 8px rgba(0,0,0,.12); transition: left .32s cubic-bezier(.2, 1.25, .4, 1), top .32s cubic-bezier(.2, 1.25, .4, 1), transform .32s cubic-bezier(.2, 1.25, .4, 1), box-shadow .32s; }
+.song-ph { border: 2px dashed var(--accent); border-radius: 12px; background: var(--accent-soft); animation: ph-in .2s ease-out; }
+@keyframes ph-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+body.moving-song, body.moving-song * { cursor: grabbing !important; user-select: none; }
+@media (hover: none) { .song-grip { opacity: .8; } }
+@media (prefers-reduced-motion: reduce) { .song.lifted, .song.lifted.settle { transition: none; transform: none; } }
 /* per-song mini to-do list and notes */
 .song-extra { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
 .sx-lab { display: flex; justify-content: space-between; font: 600 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
@@ -1719,6 +1731,11 @@ a.ev:hover { background: var(--bg); }
     var card = document.createElement("div");
     card.className = "song"; card.dataset.id = sg.id;
     var top = document.createElement("div"); top.className = "song-top";
+    if ((sg.stage || 0) < 6 && canEdit) {
+      var grip = document.createElement("button"); grip.type = "button"; grip.className = "song-grip"; grip.dataset.k = "grip"; grip.setAttribute("aria-label", "Move " + (sg.title || "song") + " (arrow keys work too)");
+      grip.innerHTML = '<svg viewBox="0 0 10 16" aria-hidden="true"><circle cx="2.5" cy="3" r="1.5"/><circle cx="7.5" cy="3" r="1.5"/><circle cx="2.5" cy="8" r="1.5"/><circle cx="7.5" cy="8" r="1.5"/><circle cx="2.5" cy="13" r="1.5"/><circle cx="7.5" cy="13" r="1.5"/></svg>';
+      top.appendChild(grip);
+    }
     var t = document.createElement("textarea");
     t.className = "song-title"; t.rows = 1; t.maxLength = 120; t.value = sg.title || ""; t.setAttribute("aria-label", "Song title");
     top.appendChild(t);
@@ -1821,7 +1838,7 @@ a.ev:hover { background: var(--bg); }
     }
   });
   function renderSongs() {
-    if (songDrag || waveDrag) { songRenderQueued = true; return; }
+    if (songDrag || waveDrag || cardMove) { songRenderQueued = true; return; }
     var box = $("songs");
     var active = document.activeElement, keep = null;
     if (active && active.closest && active.closest("#songs .song") && (active.classList.contains("song-title") || active.dataset.k)) keep = { id: active.closest(".song").dataset.id, sel: active.classList.contains("song-title") ? ".song-title" : '[data-k="' + active.dataset.k + '"]', value: active.value, start: active.selectionStart, end: active.selectionEnd };
@@ -1916,6 +1933,88 @@ a.ev:hover { background: var(--bg); }
     filesUnsub = null; songFiles = [];
     if (!songAudio.paused) songAudio.pause();
   }
+
+
+  // ---------- move song cards: lift, the others glide out of the way, drop settles in ----------
+  var cardMove = null;
+  function flip(els, change) {   // animate cards from where they were to where they end up
+    var before = els.map(function (el) { return el.getBoundingClientRect(); });
+    change();
+    els.forEach(function (el, i) {
+      var a = before[i], b = el.getBoundingClientRect(), dx = a.left - b.left, dy = a.top - b.top;
+      if (!dx && !dy) return;
+      el.style.transition = "none"; el.style.transform = "translate(" + dx + "px," + dy + "px)";
+      el.getBoundingClientRect();
+      el.style.transition = "transform .3s cubic-bezier(.2, .9, .3, 1.05)"; el.style.transform = "";
+      setTimeout(function () { el.style.transition = ""; }, 320);
+    });
+  }
+  function movable() { return Array.prototype.filter.call(songsBox.querySelectorAll(".song"), function (c) { return c.querySelector(".song-grip") && c !== (cardMove && cardMove.card); }); }
+  songsBox.addEventListener("pointerdown", function (e) {
+    var grip = e.target.closest(".song-grip"); if (!grip || e.button > 0 || !canEdit) return;
+    e.preventDefault();
+    var card = grip.closest(".song"), r = card.getBoundingClientRect();
+    var ph = document.createElement("div"); ph.className = "song-ph"; ph.style.height = r.height + "px";
+    card.parentNode.insertBefore(ph, card);
+    cardMove = { card: card, ph: ph, dx: e.clientX - r.left, dy: e.clientY - r.top, x: e.clientX, y: e.clientY, last: null, id: card.dataset.id };
+    card.style.width = r.width + "px"; card.style.left = r.left + "px"; card.style.top = r.top + "px";
+    document.body.appendChild(card); card.classList.add("lifted");
+    document.body.classList.add("moving-song");
+    try { grip.setPointerCapture(e.pointerId); } catch (x) {}
+    if (navigator.vibrate) try { navigator.vibrate(8); } catch (x) {}
+  });
+  function moveTo(x, y) {
+    var m = cardMove; m.x = x; m.y = y;
+    m.card.style.left = (x - m.dx) + "px"; m.card.style.top = (y - m.dy) + "px";
+    var cards = movable(), hit = null, after = false;
+    cards.forEach(function (c) {
+      var r = c.getBoundingClientRect();
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) { hit = c; after = x > r.left + r.width / 2; }
+    });
+    if (!hit) return;
+    var key = hit.dataset.id + (after ? ">" : "<");
+    if (key === m.last) return;
+    var ref = after ? hit.nextSibling : hit;
+    if (ref === m.ph || (after && hit.nextSibling === m.ph) || (!after && hit.previousSibling === m.ph)) { m.last = key; return; }
+    m.last = key;
+    flip(cards.concat([m.ph]), function () { songsBox.insertBefore(m.ph, ref); });
+  }
+  document.addEventListener("pointermove", function (e) {
+    if (!cardMove) return;
+    moveTo(e.clientX, e.clientY);
+    var edge = 70, v = e.clientY < edge ? -12 : e.clientY > innerHeight - edge ? 12 : 0;   // scroll near the edges
+    if (v) window.scrollBy(0, v);
+  });
+  function dropCard() {
+    var m = cardMove; if (!m) return;
+    var pr = m.ph.getBoundingClientRect();
+    m.card.classList.add("settle");
+    m.card.style.left = pr.left + "px"; m.card.style.top = pr.top + "px";
+    setTimeout(function () {
+      m.card.classList.remove("lifted", "settle"); m.card.style.left = m.card.style.top = m.card.style.width = "";
+      songsBox.insertBefore(m.card, m.ph); m.ph.remove();
+      document.body.classList.remove("moving-song");
+      // new order: number the open songs in their on-screen order
+      var ids = Array.prototype.filter.call(songsBox.querySelectorAll(".song"), function (c) { return c.querySelector(".song-grip"); }).map(function (c) { return c.dataset.id; });
+      var changed = false;
+      ids.forEach(function (id, i) { var sg = findSong(id); if (sg && sg.order !== (i + 1) * 1000) { changed = true; saveSong(id, { order: (i + 1) * 1000 }); } });
+      cardMove = null;
+      if (songRenderQueued || changed) { songRenderQueued = false; renderSongs(); }
+    }, 330);
+  }
+  document.addEventListener("pointerup", function () { if (cardMove) dropCard(); });
+  document.addEventListener("pointercancel", function () { if (cardMove) dropCard(); });
+  songsBox.addEventListener("keydown", function (e) {   // keyboard: arrows move a song one spot
+    var grip = e.target.closest && e.target.closest(".song-grip"); if (!grip) return;
+    if (["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].indexOf(e.key) < 0) return;
+    e.preventDefault();
+    var card = grip.closest(".song"), cards = movable(), i = cards.indexOf(card), j = i + (e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 1);
+    if (j < 0 || j >= cards.length) return;
+    flip(cards, function () { songsBox.insertBefore(card, j > i ? cards[j].nextSibling : cards[j]); });
+    cards = movable();
+    cards.forEach(function (c, k) { var sg = findSong(c.dataset.id); if (sg && sg.order !== (k + 1) * 1000) saveSong(c.dataset.id, { order: (k + 1) * 1000 }); });
+    grip.focus();
+  });
 
   // ---------- song audio: upload versions (v1, v2…), waveform, play and scrub ----------
   var songFiles = [], filesUnsub = null, songSel = {}, songVersOpen = {}, songUp = {}, songVDel = null, waveHover = null, waveDrag = null;
