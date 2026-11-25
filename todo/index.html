@@ -621,6 +621,18 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
 .sx-new { border: 0; border-bottom: 1px dashed var(--line); background: none; color: var(--ink); font: 13.5px var(--body); padding: 5px 2px; }
 .sx-new::placeholder { color: var(--muted); }
 .sx-new:focus { outline: none; border-bottom-color: var(--accent); }
+.sx-item.marked .sx-check { border-color: var(--fc); }
+.sx-item.marked.done .sx-check { background: var(--fc); border-color: var(--fc); }
+.sx-flag { flex: none; display: inline-flex; align-items: center; gap: 4px; border: 0; border-radius: 999px; padding: 2px 8px 2px 6px; background: color-mix(in srgb, var(--fc) 22%, transparent); color: var(--ink); font: 600 11px var(--mono); font-variant-numeric: tabular-nums; cursor: pointer; transition: transform .12s, background .15s; }
+.sx-flag:hover { transform: scale(1.06); background: color-mix(in srgb, var(--fc) 38%, transparent); }
+.sx-flag svg { width: 10px; height: 11px; fill: var(--fc); }
+.sx-item.done .sx-flag { opacity: .55; }
+.sx-mark { flex: none; width: 18px; height: 18px; border-radius: 50%; border: 1px dashed var(--muted); background: none; color: var(--muted); font: 600 13px/1 var(--body); padding: 0; cursor: pointer; display: grid; place-items: center; opacity: .7; transition: opacity .15s, border-color .15s, color .15s; }
+.sx-mark:hover, .sx-mark.on { opacity: 1; border-style: solid; border-color: var(--accent); color: var(--accent); }
+.sa-pickhint { font-size: 12px; color: var(--accent); animation: ph-in .2s ease-out; }
+.song.picking .sa-wave { cursor: crosshair; outline: 2px dashed var(--accent); outline-offset: 3px; }
+@keyframes mark-pop { 0% { transform: scale(.4); } 60% { transform: scale(1.25); } 100% { transform: none; } }
+.sx-flag.pop { animation: mark-pop .35s cubic-bezier(.3, 1.6, .5, 1); }
 .sx-notes { width: 100%; box-sizing: border-box; min-height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: 13.5px/1.45 var(--body); padding: 7px 9px; resize: none; overflow: hidden; }
 .sx-notes:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 @media (hover: none) { .sx-x { opacity: .6; } }
@@ -1801,6 +1813,7 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
     paintStage(card, Math.max(0, Math.min(6, sg.stage || 0)));
     card.appendChild(songAudioEl(sg));
     card.appendChild(songExtraEl(sg));
+    if (markPick && markPick.id === sg.id) card.classList.add("picking");
     return card;
   }
   var CHECK = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.2 5 8.5l4.5-5"/></svg>';
@@ -1812,9 +1825,12 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
     wrap.appendChild(lab);
     var list = document.createElement("div"); list.className = "sx-list";
     todos.forEach(function (td, i) {
-      var row = document.createElement("div"); row.className = "sx-item" + (td.d ? " done" : ""); row.dataset.i = i;
+      var row = document.createElement("div"); row.className = "sx-item" + (td.d ? " done" : "") + (td.m != null ? " marked" : ""); row.dataset.i = i;
+      if (td.m != null) row.style.setProperty("--fc", markColor(td.c));
+      var tag = td.m != null ? '<button type="button" class="sx-flag' + (markPop === sg.id + ":" + i ? " pop" : "") + '" title="Play from here">' + FLAG + mmss(td.m) + '</button>'
+        : (canEdit && versionsOf(sg.id).length ? '<button type="button" class="sx-mark' + (markPick && markPick.id === sg.id && markPick.i === i ? " on" : "") + '" title="Mark a time in the song">+</button>' : '');
       row.innerHTML = '<button type="button" class="sx-check" role="checkbox" aria-checked="' + (td.d ? "true" : "false") + '" aria-label="Done">' + CHECK + '</button>' +
-        '<input class="sx-text" type="text" maxlength="200" aria-label="To-do"><button type="button" class="sx-x" aria-label="Remove to-do">×</button>';
+        '<input class="sx-text" type="text" maxlength="200" aria-label="To-do">' + tag + '<button type="button" class="sx-x" aria-label="Remove to-do">×</button>';
       var inp = row.querySelector(".sx-text"); inp.value = td.t || ""; inp.dataset.k = "t" + i;
       if (!canEdit) { inp.readOnly = true; row.querySelector(".sx-x").remove(); }
       list.appendChild(row);
@@ -1829,7 +1845,31 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
     wrap.appendChild(notes);
     return wrap;
   }
-  function songTodos(id) { var sg = findSong(id); return (sg && Array.isArray(sg.todos) ? sg.todos : []).map(function (x) { return { t: x.t || "", d: !!x.d }; }); }
+  function songTodos(id) {
+    var sg = findSong(id);
+    return (sg && Array.isArray(sg.todos) ? sg.todos : []).map(function (x) {
+      var o = { t: x.t || "", d: !!x.d };
+      if (x.m != null) { o.m = x.m; o.f = x.f || ""; o.c = x.c || 0; }
+      return o;
+    });
+  }
+  // ---- time markers on the waveform: each one gets its own color, shown on the flag and the to-do ----
+  var FLAG = '<svg viewBox="0 0 10 11" aria-hidden="true"><path d="M1 0h1.4v11H1zM2.4 .5H9L7.2 3.2 9 6H2.4z"/></svg>';
+  var markPick = null, markPop = null;
+  function markColor(c) { return "hsl(" + Math.round((c * 137.508 + 18) % 360) + " 78% 60%)"; }
+  function nextMarkColor(todos) { return todos.reduce(function (mx, x) { return x.m != null ? Math.max(mx, (x.c || 0) + 1) : mx; }, 1); }
+  function liveMark(songId) {   // where this song is right now, if it has been played
+    var f = playingFile && fileById(playingFile);
+    if (!f || f.songId !== songId || (!songAudio.currentTime && songAudio.paused)) return null;
+    return { m: Math.round(songAudio.currentTime * 10) / 10, f: f.id };
+  }
+  function setMark(id, i, m, fileId) {
+    var todos = songTodos(id); if (!todos[i]) return;
+    todos[i].m = Math.max(0, Math.round(m * 10) / 10); todos[i].f = fileId; todos[i].c = nextMarkColor(todos);
+    markPick = null; markPop = id + ":" + i;
+    saveSong(id, { todos: todos }); renderSongs();
+    setTimeout(function () { markPop = null; }, 600);
+  }
   function growNotes(ta) { ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 2) + "px"; }
   var notesT = {};
   $("songs").addEventListener("input", function (e) {
@@ -1846,7 +1886,9 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
       var v = el.value.trim(); if (!v) return;
       var id = el.closest(".song").dataset.id, todos = songTodos(id);
       if (todos.length >= 50) return;
-      todos.push({ t: v.slice(0, 200), d: false });
+      var nt = { t: v.slice(0, 200), d: false }, lm = liveMark(id);
+      if (lm) { nt.m = lm.m; nt.f = lm.f; nt.c = nextMarkColor(todos); markPop = id + ":" + todos.length; setTimeout(function () { markPop = null; }, 600); }
+      todos.push(nt);
       el.value = "";
       saveSong(id, { todos: todos }); renderSongs();
       var again = songsBox.querySelector('.song[data-id="' + id + '"] .sx-new'); if (again) again.focus();
@@ -1866,6 +1908,18 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
     var row = e.target.closest(".sx-item"); if (!row || !canEdit) return;
     var id = row.closest(".song").dataset.id, i = +row.dataset.i, todos = songTodos(id);
     if (!todos[i]) return;
+    if (e.target.closest(".sx-flag")) {
+      var mf = fileById(todos[i].f);
+      if (mf) { var swap = shownVersion(id) && shownVersion(id).id !== mf.id; songSel[id] = mf.id; if (swap) renderSongs(); seekTo(mf, todos[i].m / (mf.duration || 1), true); }
+      return;
+    }
+    if (e.target.closest(".sx-mark")) {
+      var lm = liveMark(id);
+      if (lm) { setMark(id, i, lm.m, lm.f); return; }
+      markPick = markPick && markPick.id === id && markPick.i === i ? null : { id: id, i: i };   // tap the waveform next
+      renderSongs();
+      return;
+    }
     if (e.target.closest(".sx-check")) {
       todos[i].d = !todos[i].d;
       row.classList.toggle("done", todos[i].d); row.querySelector(".sx-check").setAttribute("aria-checked", todos[i].d ? "true" : "false");
@@ -2088,6 +2142,7 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
       var cv = document.createElement("canvas"); cv.className = "sa-wave"; cv.dataset.file = cur.id; cv.tabIndex = 0;
       cv.setAttribute("role", "slider"); cv.setAttribute("aria-label", "Seek in v" + cur.v); cv.setAttribute("aria-valuemin", "0"); cv.setAttribute("aria-valuemax", String(Math.round(cur.duration || 0)));
       wrap.appendChild(cv);
+      if (markPick && markPick.id === sg.id) { var ph = document.createElement("div"); ph.className = "sa-pickhint"; ph.textContent = "Tap the waveform where this to-do belongs. Esc cancels."; wrap.appendChild(ph); }
       if (vs.length > 1) {
         var open = !!songVersOpen[sg.id];
         var vt = document.createElement("button"); vt.type = "button"; vt.className = "sa-vt" + (open ? " open" : "");
@@ -2140,6 +2195,16 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
       ctx.fill();
     }
     ctx.globalAlpha = 1;
+    var sg = findSong(f.songId);
+    ((sg && sg.todos) || []).forEach(function (td) {
+      if (td.m == null || td.f !== f.id || !f.duration) return;
+      var mx = Math.max(1, Math.min(w - 1, td.m / f.duration * w));
+      ctx.globalAlpha = td.d ? .4 : 1;
+      ctx.fillStyle = markColor(td.c || 0);
+      ctx.fillRect(mx - 1, 0, 2, h);
+      ctx.beginPath(); ctx.moveTo(mx + 1, 0); ctx.lineTo(mx + 9, 3.5); ctx.lineTo(mx + 1, 7); ctx.closePath(); ctx.fill();   // little flag
+    });
+    ctx.globalAlpha = 1;
     if (prog > 0) { ctx.fillStyle = accent; ctx.fillRect(Math.min(w - 2, prog * w), 0, 2, h); }
   }
   function drawAllWaves() { Array.prototype.forEach.call(document.querySelectorAll("#songs .sa-wave"), drawWave); }
@@ -2161,6 +2226,7 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
   ["pause", "ended", "seeked", "loadedmetadata"].forEach(function (ev) { songAudio.addEventListener(ev, refreshPlayer); });
   songAudio.addEventListener("error", function () { if (playingFile) setStatus("Couldn't play that file.", true); });
   window.addEventListener("resize", function () { if (document.body.dataset.tab === "music") drawAllWaves(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && markPick) { markPick = null; renderSongs(); } });
   function loadFile(f) {
     if (playingFile !== f.id) { songAudio.src = f.url; playingFile = f.id; }
   }
@@ -2175,6 +2241,7 @@ body.moving-song, body.moving-song * { cursor: grabbing !important; user-select:
     var cv = e.target.closest(".sa-wave"); if (!cv) return;
     e.preventDefault(); cv.setPointerCapture && cv.setPointerCapture(e.pointerId);
     var f = fileById(cv.dataset.file); if (!f) return;
+    if (markPick && markPick.id === f.songId) { setMark(f.songId, markPick.i, waveFrac(cv, e) * (f.duration || 0), f.id); return; }
     waveDrag = { cv: cv, f: f, wasPlaying: playingFile === f.id && !songAudio.paused };
     songAudio.pause();
     seekTo(f, waveFrac(cv, e), false);
